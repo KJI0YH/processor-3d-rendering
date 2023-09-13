@@ -68,11 +68,13 @@ namespace Lab1.Parser
 
         private Vector3 ParseVertexTexture(string[] tokens)
         {
+            // TODO parse vertex texture
             return new Vector3();
         }
 
         private Vector3 ParseVertexNormal(string[] tokens)
         {
+            // TODO parse vertex normal
             return new Vector3();
         }
 
