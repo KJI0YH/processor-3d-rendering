@@ -36,7 +36,7 @@ namespace Lab1
             openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Wavefront files (.obj)|*.obj";
             parser = new ObjParser();
-            rasterization = DDALineRasterization;
+            rasterization = BresenhamRasterizaton;
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
@@ -79,7 +79,7 @@ namespace Lab1
         private void DrawModel(Model model, Camera camera)
         {
             double width = ActualWidth;
-            double heigth = ActualHeight;
+            double height = ActualHeight;
             foreach (var vertex in model.Vertices)
             {
                 // Local to world
@@ -89,7 +89,7 @@ namespace Lab1
                 vertex.Update(camera.View() * vertex);
 
                 // View to clip
-                vertex.Update(Matrix4.Projection(MathF.PI / 2, (float)(width / heigth), 0, 100) * vertex);
+                vertex.Update(Matrix4.Projection(MathF.PI / 2, (float)(width / height), 0, 100) * vertex);
                 vertex.Update(vertex / vertex.W);
 
                 // Clip to screen
@@ -99,9 +99,8 @@ namespace Lab1
 
             FillRenderBuffer(fillColor);
 
-            DrawLine(0, 0, (int)width - 1, (int)heigth - 1, drawColor);
-            DrawLine(0, (int)heigth - 1, (int)width - 1, 0, drawColor);
-
+            DrawLine(0, 0, (int)width - 1, (int)height - 1, drawColor);
+            DrawLine(0, (int)height - 1, (int)width - 1, 0, drawColor);
         }
 
         private void FillRenderBuffer(Color fillColor)

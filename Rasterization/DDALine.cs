@@ -10,7 +10,7 @@ namespace Lab1.Rasterization
         {
             float xDelta = xEnd - xStart;
             float yDelta = yEnd - yStart;
-            int steps = (int)MathF.Round(MathF.MaxMagnitude(xDelta, yDelta));
+            int steps = (int)MathF.Round(MathF.MaxMagnitude(Math.Abs(xDelta), Math.Abs(yDelta)));
 
             // Return initial pixel
             yield return new Pixel((int)MathF.Round(xStart), (int)MathF.Round(yStart));

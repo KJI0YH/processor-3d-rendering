@@ -8,6 +8,7 @@ namespace Lab1.Rasterization
     {
         public IEnumerable<Pixel> Rasterize(float xStart, float yStart, float xEnd, float yEnd)
         {
+            bool reverce = false;
             if (Math.Abs(xEnd - xStart) < Math.Abs(yEnd - yStart))
             {
                 float buffer = xStart;
@@ -16,6 +17,7 @@ namespace Lab1.Rasterization
                 buffer = xEnd;
                 xEnd = yEnd;
                 yEnd = buffer;
+                reverce = true;
             }
 
             int x = (int)MathF.Round(xStart);
@@ -28,7 +30,8 @@ namespace Lab1.Rasterization
 
             while (x != (int)MathF.Round(xEnd))
             {
-                yield return new Pixel(x, y);
+                if (reverce) yield return new Pixel(y, x);
+                else yield return new Pixel(x, y);
 
                 x += xChange;
                 error += yDelta;
