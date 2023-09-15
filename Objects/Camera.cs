@@ -56,7 +56,9 @@ namespace Lab1.Objects
             {
                 if (fov != value)
                 {
-                    fov = value;
+                    if (value < 0) fov = 0;
+                    else if (value > MathF.PI) fov = MathF.PI;
+                    else fov = value;
                     UpdateProjectionMatrix();
                 }
             }
@@ -74,6 +76,7 @@ namespace Lab1.Objects
             sphericalPosition = new VectorSpherical(5, 0, MathF.PI / 2);
             target = new Vector3(0, 0, 0);
             up = new Vector3(0, 1, 0);
+            UpdateViewMatrix();
         }
 
         private void UpdateProjectionMatrix()

@@ -23,12 +23,14 @@ namespace Lab1
         private const Key X_AXIS_ROTATION_KEY = Key.X;
         private const Key Y_AXIS_ROTATION_KEY = Key.Y;
         private const Key Z_AXIS_ROTATION_KEY = Key.Z;
-        private const Key TOGGLE_LINES_KEY = Key.L;
-        private const Key INCREASE_FOV_KEY = Key.F;
+        private const Key LINES_TOGGLE_KEY = Key.L;
+        private const Key FOV_CHANGE_KEY = Key.F;
+        private const Key RASTERIZATION_CHANGE_KEY = Key.R;
         private const Key HELP_KEY = Key.F1;
 
         private const float scaleDelta = 0.5f;
         private const float rotationDelta = MathF.PI / 45;
+        private const float fovDelta = MathF.PI / 36;
 
         private OpenFileDialog openFileDialog;
         private ObjParser parser;
@@ -225,6 +227,7 @@ namespace Lab1
                 if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate -= rotationDelta;
                 else if (Keyboard.IsKeyDown(Y_AXIS_ROTATION_KEY)) model.YAxisRotate -= rotationDelta;
                 else if (Keyboard.IsKeyDown(Z_AXIS_ROTATION_KEY)) model.ZAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += fovDelta;
                 else if (Keyboard.IsKeyDown(Key.LeftCtrl)) model.Scale -= scaleDelta;
                 else camera.ZoomIn();
             }
@@ -233,6 +236,7 @@ namespace Lab1
                 if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate += rotationDelta;
                 else if (Keyboard.IsKeyDown(Y_AXIS_ROTATION_KEY)) model.YAxisRotate += rotationDelta;
                 else if (Keyboard.IsKeyDown(Z_AXIS_ROTATION_KEY)) model.ZAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= fovDelta;
                 else if (Keyboard.IsKeyDown(Key.LeftCtrl)) model.Scale += scaleDelta;
                 else camera.ZoomOut();
             }
