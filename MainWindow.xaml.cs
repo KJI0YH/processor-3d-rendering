@@ -31,6 +31,7 @@ namespace Lab1
         private const float scaleDelta = 0.5f;
         private const float rotationDelta = MathF.PI / 45;
         private const float fovDelta = MathF.PI / 36;
+        private bool drawLines = true;
 
         private OpenFileDialog openFileDialog;
         private ObjParser parser;
@@ -78,12 +79,13 @@ namespace Lab1
                     {
                         model = parser.Parse(openFileDialog.FileName);
                         camera.ResetPosition();
-                        DrawModel(model, camera);
                     }
                     break;
                 case INVERT_COLORS_KEY:
                     InvertColors();
-                    DrawModel(model, camera);
+                    break;
+                case LINES_TOGGLE_KEY:
+                    drawLines = !drawLines;
                     break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
@@ -91,6 +93,7 @@ namespace Lab1
                 default:
                     break;
             }
+            DrawModel(model, camera);
         }
 
         private void InitializeRenderBuffer()
@@ -129,7 +132,15 @@ namespace Lab1
                     if (viewPortVertices[endVertexIndex] == null)
                         viewPortVertices[endVertexIndex] = camera.ViewPort * endVertex;
 
-                    DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
+                    if (drawLines)
+                    {
+                        DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
+                    }
+                    else
+                    {
+                        DrawPixel((int)viewPortVertices[startVertexIndex].X, (int)viewPortVertices[startVertexIndex].Y, drawColor);
+                        DrawPixel((int)viewPortVertices[endVertexIndex].X, (int)viewPortVertices[endVertexIndex].Y, drawColor);
+                    }
                 }
             }
             int stop = Environment.TickCount;
