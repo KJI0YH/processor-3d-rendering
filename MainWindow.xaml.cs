@@ -27,6 +27,9 @@ namespace Lab1
         private const Key INCREASE_FOV_KEY = Key.F;
         private const Key HELP_KEY = Key.F1;
 
+        private const float scaleDelta = 0.5f;
+        private const float rotationDelta = MathF.PI / 45;
+
         private OpenFileDialog openFileDialog;
         private ObjParser parser;
         private WriteableBitmap renderBuffer;
@@ -128,7 +131,6 @@ namespace Lab1
                 }
             }
             int stop = Environment.TickCount;
-            lblMs.Content = $"Drawing time: {stop - start} ms";
         }
 
         private void FillRenderBuffer(Color fillColor)
@@ -220,11 +222,19 @@ namespace Lab1
         {
             if (e.Delta < 0)
             {
-                camera.ZoomIn();
+                if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(Y_AXIS_ROTATION_KEY)) model.YAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(Z_AXIS_ROTATION_KEY)) model.ZAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(Key.LeftCtrl)) model.Scale -= scaleDelta;
+                else camera.ZoomIn();
             }
             else
             {
-                camera.ZoomOut();
+                if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(Y_AXIS_ROTATION_KEY)) model.YAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(Z_AXIS_ROTATION_KEY)) model.ZAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(Key.LeftCtrl)) model.Scale += scaleDelta;
+                else camera.ZoomOut();
             }
             DrawModel(model, camera);
         }
@@ -235,7 +245,7 @@ namespace Lab1
             fillColor = drawColor;
             drawColor = buffer;
             Brush labelBrush = new SolidColorBrush(drawColor);
-            lblMs.Foreground = labelBrush;
+            //lblMs.Foreground = labelBrush;
         }
     }
 }

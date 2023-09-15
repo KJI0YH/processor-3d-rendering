@@ -8,6 +8,5 @@
         Title="MainWindow" Height="450" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" WindowState="Maximized" WindowStyle="None" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged" ContentRendered="Window_ContentRendered" MouseMove="Window_MouseMove" MouseWheel="Window_MouseWheel" Cursor="Cross" MouseLeftButtonDown="Window_MouseLeftButtonDown" FontFamily="Courier New">
     <Grid>
         <Image x:Name="imgScreen"/>
-        <Label x:Name="lblMs" Content="" HorizontalAlignment="Right" Margin="0,10,10,0" VerticalAlignment="Top" Width="200" Height="25" Foreground="White"/>
     </Grid>
 </Window>

@@ -29,7 +29,9 @@ namespace Lab1
             {
                 if (scale != value)
                 {
-                    scale = value;
+                    if (value > 0) scale = value;
+                    else scale = 0;
+
                     ScaleMatrix = Matrix4.Scale(new Vector3(scale, scale, scale));
                     UpdateTransformation();
                 }
@@ -58,7 +60,7 @@ namespace Lab1
                 if (yAxisRotate != value)
                 {
                     yAxisRotate = value;
-                    RotationY = Matrix4.RotateX(yAxisRotate);
+                    RotationY = Matrix4.RotateY(yAxisRotate);
                     UpdateTransformation();
                 }
             }
@@ -72,7 +74,7 @@ namespace Lab1
                 if (zAxisRotate != value)
                 {
                     zAxisRotate = value;
-                    RotationZ = Matrix4.RotateX(zAxisRotate);
+                    RotationZ = Matrix4.RotateZ(zAxisRotate);
                     UpdateTransformation();
                 }
             }
