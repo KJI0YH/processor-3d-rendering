@@ -4,10 +4,10 @@ namespace Lab1.Primitives
 {
     public class Vector3
     {
-        public float X { get; protected set; } = 0;
-        public float Y { get; protected set; } = 0;
-        public float Z { get; protected set; } = 0;
-        public float W { get; protected set; } = 1;
+        public float X { get; set; } = 0;
+        public float Y { get; set; } = 0;
+        public float Z { get; set; } = 0;
+        public float W { get; set; } = 1;
         public static int Size { get; } = 3;
 
         public Vector3() { }

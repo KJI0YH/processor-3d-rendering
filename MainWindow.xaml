@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Lab1"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" WindowState="Maximized" WindowStyle="None" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged" ContentRendered="Window_ContentRendered">
+        Title="MainWindow" Height="450" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" WindowState="Maximized" WindowStyle="None" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged" ContentRendered="Window_ContentRendered" MouseMove="Window_MouseMove" MouseWheel="Window_MouseWheel" Cursor="Cross" MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Image x:Name="imgScreen">
         
     </Image>

@@ -4,6 +4,7 @@ using Lab1.Primitives;
 using Lab1.Rasterization;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -18,10 +19,15 @@ namespace Lab1
     {
         private const Key OPEN_FILE_KEY = Key.O;
         private const Key CLOSE_APP_KEY = Key.Escape;
+        private const Key INVERT_COLORS_KEY = Key.I;
 
         private OpenFileDialog openFileDialog;
         private ObjParser parser;
         private WriteableBitmap renderBuffer;
+        private Model model;
+        private Camera camera;
+
+        private Point mouseClickPosition;
 
         private Color fillColor = Colors.Black;
         private Color drawColor = Colors.White;
@@ -57,10 +63,16 @@ namespace Lab1
                 case OPEN_FILE_KEY:
                     if (openFileDialog.ShowDialog() == true)
                     {
-                        Model model = parser.Parse(openFileDialog.FileName);
-                        Camera camera = new Camera();
+                        model = parser.Parse(openFileDialog.FileName);
+                        camera = new Camera();
                         DrawModel(model, camera);
                     }
+                    break;
+                case INVERT_COLORS_KEY:
+                    Color buffer = fillColor;
+                    fillColor = drawColor;
+                    drawColor = buffer;
+                    DrawModel(model, camera);
                     break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
@@ -78,29 +90,32 @@ namespace Lab1
 
         private void DrawModel(Model model, Camera camera)
         {
+            FillRenderBuffer(fillColor);
             double width = ActualWidth;
             double height = ActualHeight;
+            List<Vector3> convertedVertices = new List<Vector3>();
             foreach (var vertex in model.Vertices)
             {
-                // Local to world
-                vertex.Update(Matrix4.Move(new Vector3(0, 0, 0)) * vertex);
-
-                // World to view
-                vertex.Update(camera.View() * vertex);
-
-                // View to clip
-                vertex.Update(Matrix4.Projection(MathF.PI / 2, (float)(width / height), 0, 100) * vertex);
-                vertex.Update(vertex / vertex.W);
-
-                // Clip to screen
-                // TODO check that point in screen
-                //vertex.Update(Matrix4.Viewport(width, heigth, 0, 0) * vertex);
+                Vector3 convertedVertex = Matrix4.Projection(MathF.PI / 2, 2f, 0, 100) * (camera.View() * (Matrix4.Scale(new Vector3(1, 1, 1)) * vertex));
+                convertedVertex.Update(convertedVertex / convertedVertex.W);
+                convertedVertices.Add(convertedVertex);
             }
 
-            FillRenderBuffer(fillColor);
+            foreach (var polygon in model.Polygons)
+            {
+                for (int i = 0; i < polygon.Indices.Count; i++)
+                {
+                    Vector3 startVertex = convertedVertices[polygon.Indices[i]];
+                    Vector3 endVertex = convertedVertices[polygon.Indices[(i + 1) % polygon.Indices.Count]];
 
-            DrawLine(0, 0, (int)width - 1, (int)height - 1, drawColor);
-            DrawLine(0, (int)height - 1, (int)width - 1, 0, drawColor);
+                    if (startVertex.X < -1 || startVertex.X > 1 || startVertex.Y < -1 || startVertex.Y > 1 || startVertex.Z < -1 || startVertex.Z > 1) continue;
+                    if (endVertex.X < -1 || endVertex.X > 1 || endVertex.Y < -1 || endVertex.Y > 1 || endVertex.Z < -1 || endVertex.Z > 1) continue;
+
+                    Vector3 screenStart = (Matrix4.Viewport(width - 1, height - 1, 0, 0) * startVertex);
+                    Vector3 screenEnd = (Matrix4.Viewport(width - 1, height - 1, 0, 0) * endVertex);
+                    DrawLine(screenStart.X, screenStart.Y, screenEnd.X, screenEnd.Y, drawColor);
+                }
+            }
         }
 
         private void FillRenderBuffer(Color fillColor)
@@ -161,12 +176,44 @@ namespace Lab1
             }
         }
 
-        private void DrawLine(int xStart, int yStart, int xEnd, int yEnd, Color color)
+        private void DrawLine(float xStart, float yStart, float xEnd, float yEnd, Color color)
         {
             foreach (Pixel pixel in rasterization.Rasterize(xStart, yStart, xEnd, yEnd))
             {
                 DrawPixel(pixel.X, pixel.Y, color);
             }
+        }
+
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            mouseClickPosition = e.GetPosition(this);
+        }
+
+        private void Window_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point clickPosition = e.GetPosition(this);
+                double deltaX = clickPosition.X - mouseClickPosition.X;
+                double deltaY = clickPosition.Y - mouseClickPosition.Y;
+                mouseClickPosition = clickPosition;
+                camera.MoveAzimuth(-deltaX);
+                camera.MoveZenith(-deltaY);
+                DrawModel(model, camera);
+            }
+        }
+
+        private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Delta < 0)
+            {
+                camera.ZoomIn();
+            }
+            else
+            {
+                camera.ZoomOut();
+            }
+            DrawModel(model, camera);
         }
     }
 }

@@ -94,7 +94,7 @@ namespace Lab1.Parser
 
                         try
                         {
-                            polygon.AddVertex(readVertices[vertexIndex]);
+                            polygon.AddVertex(readVertices, vertexIndex);
                         }
                         catch (IndexOutOfRangeException)
                         {
