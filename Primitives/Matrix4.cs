@@ -114,11 +114,11 @@ namespace Lab1.Primitives
             return matrix;
         }
 
-        public static Matrix4 Viewport(double width, double height, float xMin, float yMin)
+        public static Matrix4 Viewport(float width, float height, float xMin, float yMin)
         {
             Matrix4 matrix = One();
-            matrix[0, 0] = (float)(width / 2);
-            matrix[1, 1] = (float)(-height / 2);
+            matrix[0, 0] = width / 2;
+            matrix[1, 1] = -height / 2;
             matrix[0, 3] = xMin + matrix[0, 0];
             matrix[1, 3] = yMin - matrix[1, 1];
             return matrix;
@@ -133,7 +133,7 @@ namespace Lab1.Primitives
                 {
                     for (int common = 0; common < Dimension; common++)
                     {
-                        matrix[row, col] = a[row, common] * b[common, col];
+                        matrix[row, col] += a[row, common] * b[common, col];
                     }
                 }
             }

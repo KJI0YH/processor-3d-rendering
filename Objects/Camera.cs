@@ -11,12 +11,77 @@ namespace Lab1.Objects
         private const float speed = 0.5f;
         private const float angleDelta = MathF.PI / 360;
 
-        public Camera()
-        {
+        public Matrix4 View { get; private set; }
+        public Matrix4 Projection { get; private set; }
+        public Matrix4 ViewPort { get; private set; }
 
+        private float screenWidth = 16;
+        private float screenHeight = 9;
+        private float fov = MathF.PI / 2;
+        private float zNear = 0;
+        private float zFar = 100;
+
+        public float ScreenWidth
+        {
+            get { return screenWidth; }
+            set
+            {
+                if (screenWidth != value)
+                {
+                    screenWidth = value;
+                    UpdateProjectionMatrix();
+                    UpdateViewPortMatrix();
+                }
+            }
         }
 
-        public Matrix4 View()
+        public float ScreenHeight
+        {
+            get { return screenHeight; }
+            set
+            {
+                if (screenHeight != value)
+                {
+                    screenHeight = value;
+                    UpdateProjectionMatrix();
+                    UpdateViewPortMatrix();
+                }
+            }
+        }
+
+        public float FOV
+        {
+            get { return fov; }
+            set
+            {
+                if (fov != value)
+                {
+                    fov = value;
+                    UpdateProjectionMatrix();
+                }
+            }
+        }
+
+        public Camera()
+        {
+            UpdateViewMatrix();
+            UpdateProjectionMatrix();
+            UpdateViewPortMatrix();
+        }
+
+        public void ResetPosition()
+        {
+            sphericalPosition = new VectorSpherical(5, 0, MathF.PI / 2);
+            target = new Vector3(0, 0, 0);
+            up = new Vector3(0, 1, 0);
+        }
+
+        private void UpdateProjectionMatrix()
+        {
+            Projection = Matrix4.Projection(fov, screenWidth / screenHeight, zNear, zFar);
+        }
+
+        private void UpdateViewMatrix()
         {
             Matrix4 matrix = Matrix4.One();
             Vector3 cartesianPosition = sphericalPosition.ToCartesian();
@@ -33,22 +98,33 @@ namespace Lab1.Objects
             matrix[0, 3] = -(xAxis.Dot(cartesianPosition));
             matrix[1, 3] = -(yAxis.Dot(cartesianPosition));
             matrix[2, 3] = -(zAxis.Dot(cartesianPosition));
-            return matrix;
+            View = matrix;
+        }
+
+        private void UpdateViewPortMatrix()
+        {
+            ViewPort = Matrix4.Viewport(screenWidth - 1, screenHeight - 1, 0, 0);
         }
 
         public void ZoomIn()
         {
             sphericalPosition.R += speed;
+            UpdateViewMatrix();
         }
 
         public void ZoomOut()
         {
-            sphericalPosition.R -= speed;
+            if (sphericalPosition.R > speed)
+            {
+                sphericalPosition.R -= speed;
+                UpdateViewMatrix();
+            }
         }
 
         public void MoveAzimuth(double deltaX)
         {
             sphericalPosition.AzimuthAngle += (float)deltaX * angleDelta;
+            UpdateViewMatrix();
         }
 
         public void MoveZenith(double deltaY)
@@ -58,6 +134,7 @@ namespace Lab1.Objects
             up.X = -MathF.Cos(sphericalPosition.ElevationAngle) * MathF.Sin(sphericalPosition.AzimuthAngle);
             up.Y = MathF.Sin(sphericalPosition.ElevationAngle);
             up.Z = -MathF.Cos(sphericalPosition.ElevationAngle) * MathF.Cos(sphericalPosition.AzimuthAngle);
+            UpdateViewMatrix();
         }
     }
 }

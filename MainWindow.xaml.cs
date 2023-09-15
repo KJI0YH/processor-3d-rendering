@@ -17,20 +17,26 @@ namespace Lab1
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const Key OPEN_FILE_KEY = Key.O;
         private const Key CLOSE_APP_KEY = Key.Escape;
+        private const Key OPEN_FILE_KEY = Key.O;
         private const Key INVERT_COLORS_KEY = Key.I;
+        private const Key X_AXIS_ROTATION_KEY = Key.X;
+        private const Key Y_AXIS_ROTATION_KEY = Key.Y;
+        private const Key Z_AXIS_ROTATION_KEY = Key.Z;
+        private const Key TOGGLE_LINES_KEY = Key.L;
+        private const Key INCREASE_FOV_KEY = Key.F;
+        private const Key HELP_KEY = Key.F1;
 
         private OpenFileDialog openFileDialog;
         private ObjParser parser;
         private WriteableBitmap renderBuffer;
         private Model model;
-        private Camera camera;
+        private Camera camera = new Camera();
 
         private Point mouseClickPosition;
-
         private Color fillColor = Colors.Black;
         private Color drawColor = Colors.White;
+        private Color errorColor = Colors.Red;
 
         private DDALine DDALineRasterization = new DDALine();
         private Bresenham BresenhamRasterizaton = new Bresenham();
@@ -54,6 +60,8 @@ namespace Lab1
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             InitializeRenderBuffer();
+            camera.ScreenWidth = (float)ActualWidth;
+            camera.ScreenHeight = (float)ActualHeight;
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -64,14 +72,12 @@ namespace Lab1
                     if (openFileDialog.ShowDialog() == true)
                     {
                         model = parser.Parse(openFileDialog.FileName);
-                        camera = new Camera();
+                        camera.ResetPosition();
                         DrawModel(model, camera);
                     }
                     break;
                 case INVERT_COLORS_KEY:
-                    Color buffer = fillColor;
-                    fillColor = drawColor;
-                    drawColor = buffer;
+                    InvertColors();
                     DrawModel(model, camera);
                     break;
                 case CLOSE_APP_KEY:
@@ -91,31 +97,38 @@ namespace Lab1
         private void DrawModel(Model model, Camera camera)
         {
             FillRenderBuffer(fillColor);
-            double width = ActualWidth;
-            double height = ActualHeight;
-            List<Vector3> convertedVertices = new List<Vector3>();
+            List<Vector3> projectedVertices = new List<Vector3>();
+            int start = Environment.TickCount;
             foreach (var vertex in model.Vertices)
             {
-                Vector3 convertedVertex = Matrix4.Projection(MathF.PI / 2, 2f, 0, 100) * (camera.View() * (Matrix4.Scale(new Vector3(1, 1, 1)) * vertex));
-                convertedVertex.Update(convertedVertex / convertedVertex.W);
-                convertedVertices.Add(convertedVertex);
+                Vector3 projectedVertex = camera.Projection * (camera.View * (model.Transformation * vertex));
+                projectedVertex.Update(projectedVertex / projectedVertex.W);
+                projectedVertices.Add(projectedVertex);
             }
 
+            Vector3?[] viewPortVertices = new Vector3?[projectedVertices.Count];
             foreach (var polygon in model.Polygons)
             {
                 for (int i = 0; i < polygon.Indices.Count; i++)
                 {
-                    Vector3 startVertex = convertedVertices[polygon.Indices[i]];
-                    Vector3 endVertex = convertedVertices[polygon.Indices[(i + 1) % polygon.Indices.Count]];
+                    int startVertexIndex = polygon.Indices[i];
+                    int endVertexIndex = polygon.Indices[(i + 1) % polygon.Indices.Count];
+                    Vector3 startVertex = projectedVertices[startVertexIndex];
+                    Vector3 endVertex = projectedVertices[endVertexIndex];
 
                     if (startVertex.X < -1 || startVertex.X > 1 || startVertex.Y < -1 || startVertex.Y > 1 || startVertex.Z < -1 || startVertex.Z > 1) continue;
                     if (endVertex.X < -1 || endVertex.X > 1 || endVertex.Y < -1 || endVertex.Y > 1 || endVertex.Z < -1 || endVertex.Z > 1) continue;
 
-                    Vector3 screenStart = (Matrix4.Viewport(width - 1, height - 1, 0, 0) * startVertex);
-                    Vector3 screenEnd = (Matrix4.Viewport(width - 1, height - 1, 0, 0) * endVertex);
-                    DrawLine(screenStart.X, screenStart.Y, screenEnd.X, screenEnd.Y, drawColor);
+                    if (viewPortVertices[startVertexIndex] == null)
+                        viewPortVertices[startVertexIndex] = camera.ViewPort * startVertex;
+                    if (viewPortVertices[endVertexIndex] == null)
+                        viewPortVertices[endVertexIndex] = camera.ViewPort * endVertex;
+
+                    DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
                 }
             }
+            int stop = Environment.TickCount;
+            lblMs.Content = $"Drawing time: {stop - start} ms";
         }
 
         private void FillRenderBuffer(Color fillColor)
@@ -214,6 +227,15 @@ namespace Lab1
                 camera.ZoomOut();
             }
             DrawModel(model, camera);
+        }
+
+        private void InvertColors()
+        {
+            Color buffer = fillColor;
+            fillColor = drawColor;
+            drawColor = buffer;
+            Brush labelBrush = new SolidColorBrush(drawColor);
+            lblMs.Foreground = labelBrush;
         }
     }
 }
