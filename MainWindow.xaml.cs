@@ -19,22 +19,23 @@ namespace Lab1
     {
         private const Key CLOSE_APP_KEY = Key.Escape;
         private const Key OPEN_FILE_KEY = Key.O;
-        private const Key INVERT_COLORS_KEY = Key.I;
+        private const Key INVERT_COLORS_KEY = Key.C;
         private const Key X_AXIS_ROTATION_KEY = Key.X;
         private const Key Y_AXIS_ROTATION_KEY = Key.Y;
         private const Key Z_AXIS_ROTATION_KEY = Key.Z;
         private const Key LINES_TOGGLE_KEY = Key.L;
         private const Key FOV_CHANGE_KEY = Key.F;
         private const Key RASTERIZATION_CHANGE_KEY = Key.R;
+        private const Key INFORMATION_KEY = Key.I;
         private const Key HELP_KEY = Key.F1;
 
         private const float scaleDelta = 0.5f;
-        private const float rotationDelta = MathF.PI / 45;
+        private const float rotationDelta = MathF.PI / 36;
         private const float fovDelta = MathF.PI / 36;
         private bool drawLines = true;
 
         private OpenFileDialog openFileDialog;
-        private ObjParser parser;
+        private ObjParser parser = new ObjParser();
         private WriteableBitmap renderBuffer;
         private Model model;
         private Camera camera = new Camera();
@@ -44,17 +45,20 @@ namespace Lab1
         private Color drawColor = Colors.White;
         private Color errorColor = Colors.Red;
 
-        private DDALine DDALineRasterization = new DDALine();
-        private Bresenham BresenhamRasterizaton = new Bresenham();
-        private IRasterization rasterization;
+        private int rasterizationMethodIndex = 0;
+        private IRasterization[] rasterizationMethods = new IRasterization[]
+        {
+            new Bresenham(),
+            new DDALine(),
+        };
+        private IRasterization rasterizationMethod;
 
         public MainWindow()
         {
             InitializeComponent();
             openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Wavefront files (.obj)|*.obj";
-            parser = new ObjParser();
-            rasterization = BresenhamRasterizaton;
+            rasterizationMethod = rasterizationMethods[rasterizationMethodIndex];
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
@@ -86,6 +90,9 @@ namespace Lab1
                     break;
                 case LINES_TOGGLE_KEY:
                     drawLines = !drawLines;
+                    break;
+                case RASTERIZATION_CHANGE_KEY:
+                    ChangeRasterization();
                     break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
@@ -206,7 +213,7 @@ namespace Lab1
 
         private void DrawLine(float xStart, float yStart, float xEnd, float yEnd, Color color)
         {
-            foreach (Pixel pixel in rasterization.Rasterize(xStart, yStart, xEnd, yEnd))
+            foreach (Pixel pixel in rasterizationMethod.Rasterize(xStart, yStart, xEnd, yEnd))
             {
                 DrawPixel(pixel.X, pixel.Y, color);
             }
@@ -261,6 +268,11 @@ namespace Lab1
             drawColor = buffer;
             Brush labelBrush = new SolidColorBrush(drawColor);
             //lblMs.Foreground = labelBrush;
+        }
+
+        private void ChangeRasterization()
+        {
+            rasterizationMethod = rasterizationMethods[++rasterizationMethodIndex % rasterizationMethods.Length];
         }
     }
 }
