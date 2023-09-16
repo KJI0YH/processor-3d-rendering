@@ -7,7 +7,12 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" WindowState="Maximized" WindowStyle="None" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged" ContentRendered="Window_ContentRendered" MouseMove="Window_MouseMove" MouseWheel="Window_MouseWheel" Cursor="Cross" MouseLeftButtonDown="Window_MouseLeftButtonDown" FontFamily="Courier New">
     <Grid>
-        <Image x:Name="imgScreen"/>
-        <TextBlock x:Name="tbInfo" TextWrapping="Wrap" TextAlignment="Left" FontSize="13" Cursor="No" IsEnabled="False" HorizontalAlignment="Left" Width="385" Height="430" VerticalAlignment="Top" Margin="10,6,0,0"/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Image x:Name="imgScreen" Grid.Column="0" Grid.ColumnSpan="2"/>
+        <TextBlock x:Name="tbInfo" Grid.Column="0" TextWrapping="Wrap" TextAlignment="Left" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Hidden"/>
+        <TextBlock x:Name="tbHelp" Grid.Column="1" TextWrapping="Wrap" TextAlignment="Right" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Hidden" />
     </Grid>
 </Window>

@@ -63,6 +63,7 @@ namespace Lab1
             openFileDialog.Filter = "Wavefront files (.obj)|*.obj";
             rasterizationMethod = rasterizationMethods[rasterizationMethodIndex];
             tbInfo.Foreground = new SolidColorBrush(drawColor);
+            tbHelp.Foreground = new SolidColorBrush(drawColor);
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
@@ -100,6 +101,10 @@ namespace Lab1
                     break;
                 case INFORMATION_TOGGLE_KEY:
                     ChangeVisibility(tbInfo);
+                    break;
+                case HELP_TOGGLE_KEY:
+                    ChangeVisibility(tbHelp);
+                    tbHelp.Text = renderInfo.GetHelp();
                     break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
@@ -163,6 +168,7 @@ namespace Lab1
             int stop = Environment.TickCount;
             renderInfo.RenderTime = stop - start;
             tbInfo.Text = renderInfo.GetInfomation(model, camera, rasterizationMethod);
+            tbHelp.Text = renderInfo.GetHelp();
         }
 
         private void FillRenderBuffer(Color fillColor)
@@ -280,6 +286,7 @@ namespace Lab1
             drawColor = buffer;
             Brush textBrush = new SolidColorBrush(drawColor);
             tbInfo.Foreground = textBrush;
+            tbHelp.Foreground = textBrush;
         }
 
         private void ChangeRasterization()
