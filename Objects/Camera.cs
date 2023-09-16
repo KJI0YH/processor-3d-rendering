@@ -5,9 +5,9 @@ namespace Lab1.Objects
 {
     public class Camera
     {
-        private VectorSpherical sphericalPosition = new VectorSpherical(5, 0, MathF.PI / 2);
-        private Vector3 target = new Vector3(0, 0, 0);
-        private Vector3 up = new Vector3(0, 1, 0);
+        public VectorSpherical SphericalPosition { get; private set; } = new VectorSpherical(5, 0, MathF.PI / 2);
+        public Vector3 Target { get; private set; } = new Vector3(0, 0, 0);
+        public Vector3 Up { get; private set; } = new Vector3(0, 1, 0);
         private const float speed = 0.5f;
         private const float angleDelta = MathF.PI / 360;
 
@@ -73,9 +73,9 @@ namespace Lab1.Objects
 
         public void ResetPosition()
         {
-            sphericalPosition = new VectorSpherical(5, 0, MathF.PI / 2);
-            target = new Vector3(0, 0, 0);
-            up = new Vector3(0, 1, 0);
+            SphericalPosition = new VectorSpherical(5, 0, MathF.PI / 2);
+            Target = new Vector3(0, 0, 0);
+            Up = new Vector3(0, 1, 0);
             UpdateViewMatrix();
         }
 
@@ -87,10 +87,10 @@ namespace Lab1.Objects
         private void UpdateViewMatrix()
         {
             Matrix4 matrix = Matrix4.One();
-            Vector3 cartesianPosition = sphericalPosition.ToCartesian();
-            Vector3 zAxis = (cartesianPosition - target).Normalize();
-            Vector3 xAxis = up.Cross(zAxis).Normalize();
-            Vector3 yAxis = up;
+            Vector3 cartesianPosition = SphericalPosition.ToCartesian();
+            Vector3 zAxis = (cartesianPosition - Target).Normalize();
+            Vector3 xAxis = Up.Cross(zAxis).Normalize();
+            Vector3 yAxis = Up;
 
             for (int col = 0; col < Vector3.Size; col++)
             {
@@ -111,32 +111,32 @@ namespace Lab1.Objects
 
         public void ZoomIn()
         {
-            sphericalPosition.R += speed;
+            SphericalPosition.R += speed;
             UpdateViewMatrix();
         }
 
         public void ZoomOut()
         {
-            if (sphericalPosition.R > speed)
+            if (SphericalPosition.R > speed)
             {
-                sphericalPosition.R -= speed;
+                SphericalPosition.R -= speed;
                 UpdateViewMatrix();
             }
         }
 
         public void MoveAzimuth(double deltaX)
         {
-            sphericalPosition.AzimuthAngle += (float)deltaX * angleDelta;
+            SphericalPosition.AzimuthAngle += (float)deltaX * angleDelta;
             UpdateViewMatrix();
         }
 
         public void MoveZenith(double deltaY)
         {
-            sphericalPosition.ElevationAngle += (float)deltaY * angleDelta;
-            Vector3 position = sphericalPosition.ToCartesian();
-            up.X = -MathF.Cos(sphericalPosition.ElevationAngle) * MathF.Sin(sphericalPosition.AzimuthAngle);
-            up.Y = MathF.Sin(sphericalPosition.ElevationAngle);
-            up.Z = -MathF.Cos(sphericalPosition.ElevationAngle) * MathF.Cos(sphericalPosition.AzimuthAngle);
+            SphericalPosition.ElevationAngle += (float)deltaY * angleDelta;
+            Vector3 position = SphericalPosition.ToCartesian();
+            Up.X = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Sin(SphericalPosition.AzimuthAngle);
+            Up.Y = MathF.Sin(SphericalPosition.ElevationAngle);
+            Up.Z = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);
             UpdateViewMatrix();
         }
     }

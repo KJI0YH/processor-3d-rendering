@@ -80,6 +80,19 @@ namespace Lab1
             }
         }
 
+        public Vector3 Translation
+        {
+            get { return translation; }
+            set
+            {
+                if (translation != value)
+                {
+                    translation = value;
+                    Move = Matrix4.Move(translation);
+                }
+            }
+        }
+
         public Matrix4 Transformation { get; private set; }
 
         public Model()

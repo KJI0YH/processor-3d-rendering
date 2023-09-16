@@ -1,4 +1,5 @@
-﻿using Lab1.Objects;
+﻿using Lab1.Information;
+using Lab1.Objects;
 using Lab1.Parser;
 using Lab1.Primitives;
 using Lab1.Rasterization;
@@ -6,6 +7,7 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -26,8 +28,8 @@ namespace Lab1
         private const Key LINES_TOGGLE_KEY = Key.L;
         private const Key FOV_CHANGE_KEY = Key.F;
         private const Key RASTERIZATION_CHANGE_KEY = Key.R;
-        private const Key INFORMATION_KEY = Key.I;
-        private const Key HELP_KEY = Key.F1;
+        private const Key INFORMATION_TOGGLE_KEY = Key.I;
+        private const Key HELP_TOGGLE_KEY = Key.F1;
 
         private const float scaleDelta = 0.5f;
         private const float rotationDelta = MathF.PI / 36;
@@ -39,6 +41,7 @@ namespace Lab1
         private WriteableBitmap renderBuffer;
         private Model model;
         private Camera camera = new Camera();
+        private RenderInfo renderInfo = new RenderInfo();
 
         private Point mouseClickPosition;
         private Color fillColor = Colors.Black;
@@ -59,6 +62,7 @@ namespace Lab1
             openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Wavefront files (.obj)|*.obj";
             rasterizationMethod = rasterizationMethods[rasterizationMethodIndex];
+            tbInfo.Foreground = new SolidColorBrush(drawColor);
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
@@ -69,9 +73,9 @@ namespace Lab1
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            InitializeRenderBuffer();
             camera.ScreenWidth = (float)ActualWidth;
             camera.ScreenHeight = (float)ActualHeight;
+            InitializeRenderBuffer();
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -94,18 +98,24 @@ namespace Lab1
                 case RASTERIZATION_CHANGE_KEY:
                     ChangeRasterization();
                     break;
+                case INFORMATION_TOGGLE_KEY:
+                    ChangeVisibility(tbInfo);
+                    break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
                     break;
                 default:
                     break;
             }
-            DrawModel(model, camera);
+            if (model != null && camera != null)
+            {
+                DrawModel(model, camera);
+            }
         }
 
         private void InitializeRenderBuffer()
         {
-            renderBuffer = new WriteableBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Bgr32, null);
+            renderBuffer = new WriteableBitmap((int)camera.ScreenWidth, (int)camera.ScreenHeight, 96, 96, PixelFormats.Bgr32, null);
             imgScreen.Source = renderBuffer;
         }
 
@@ -151,6 +161,8 @@ namespace Lab1
                 }
             }
             int stop = Environment.TickCount;
+            renderInfo.RenderTime = stop - start;
+            tbInfo.Text = renderInfo.GetInfomation(model, camera, rasterizationMethod);
         }
 
         private void FillRenderBuffer(Color fillColor)
@@ -266,13 +278,25 @@ namespace Lab1
             Color buffer = fillColor;
             fillColor = drawColor;
             drawColor = buffer;
-            Brush labelBrush = new SolidColorBrush(drawColor);
-            //lblMs.Foreground = labelBrush;
+            Brush textBrush = new SolidColorBrush(drawColor);
+            tbInfo.Foreground = textBrush;
         }
 
         private void ChangeRasterization()
         {
             rasterizationMethod = rasterizationMethods[++rasterizationMethodIndex % rasterizationMethods.Length];
+        }
+
+        private void ChangeVisibility(TextBlock textBlock)
+        {
+            if (textBlock.Visibility == Visibility.Visible)
+            {
+                textBlock.Visibility = Visibility.Hidden;
+            }
+            else
+            {
+                textBlock.Visibility = Visibility.Visible;
+            }
         }
     }
 }
