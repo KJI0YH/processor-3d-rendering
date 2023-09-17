@@ -23,16 +23,19 @@ namespace Lab1
         private const Key CLOSE_APP_KEY = Key.Escape;
         private const Key OPEN_FILE_KEY = Key.O;
         private const Key INVERT_COLORS_KEY = Key.C;
-        private const Key X_AXIS_ROTATION_KEY = Key.X;
-        private const Key Y_AXIS_ROTATION_KEY = Key.Y;
-        private const Key Z_AXIS_ROTATION_KEY = Key.Z;
+        private const Key X_CONTROL_KEY = Key.X;
+        private const Key Y_CONTROL_KEY = Key.Y;
+        private const Key Z_CONTROL_KEY = Key.Z;
         private const Key LINES_TOGGLE_KEY = Key.L;
         private const Key FOV_CHANGE_KEY = Key.F;
         private const Key RASTERIZATION_CHANGE_KEY = Key.R;
         private const Key INFORMATION_TOGGLE_KEY = Key.I;
         private const Key HELP_TOGGLE_KEY = Key.F1;
+        private const Key SCALE_KEY = Key.S;
+        private const Key MOVE_KEY = Key.LeftShift;
+        private const Key MOVE_STEP_KEY = Key.M;
+        private const Key CONTROL_KEY = Key.LeftCtrl;
 
-        private const float scaleDelta = 0.1f;
         private const float rotationDelta = MathF.PI / 36;
         private const float fovDelta = MathF.PI / 36;
         private bool drawLines = true;
@@ -295,20 +298,32 @@ namespace Lab1
             }
             if (e.Delta < 0)
             {
-                if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate -= rotationDelta;
-                else if (Keyboard.IsKeyDown(Y_AXIS_ROTATION_KEY)) model.YAxisRotate -= rotationDelta;
-                else if (Keyboard.IsKeyDown(Z_AXIS_ROTATION_KEY)) model.ZAxisRotate -= rotationDelta;
-                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += fovDelta;
-                else if (Keyboard.IsKeyDown(Key.LeftCtrl)) model.Scale -= scaleDelta;
+                if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByX(-model.MoveStep);
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByY(-model.MoveStep);
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByZ(-model.MoveStep);
+                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= fovDelta;
+                else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.DecreaseScaleStep();
+                else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale -= model.ScaleStep;
+                else if (Keyboard.IsKeyDown(CONTROL_KEY)) camera.DecreaseZoomStep();
+                else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) model.DecreaseMoveStep();
                 else camera.ZoomIn();
             }
             else
             {
-                if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate += rotationDelta;
-                else if (Keyboard.IsKeyDown(Y_AXIS_ROTATION_KEY)) model.YAxisRotate += rotationDelta;
-                else if (Keyboard.IsKeyDown(Z_AXIS_ROTATION_KEY)) model.ZAxisRotate += rotationDelta;
-                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= fovDelta;
-                else if (Keyboard.IsKeyDown(Key.LeftCtrl)) model.Scale += scaleDelta;
+                if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByX(model.MoveStep);
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByY(model.MoveStep);
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByZ(model.MoveStep);
+                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += fovDelta;
+                else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.IncreaseScaleStep();
+                else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale += model.ScaleStep;
+                else if (Keyboard.IsKeyDown(CONTROL_KEY)) camera.IncreaseZoomStep();
+                else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) model.IncreaseMoveStep();
                 else camera.ZoomOut();
             }
             DrawModel(model, camera);

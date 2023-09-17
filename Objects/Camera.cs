@@ -5,10 +5,10 @@ namespace Lab1.Objects
 {
     public class Camera
     {
-        public VectorSpherical SphericalPosition { get; private set; } = new VectorSpherical(5, 0, MathF.PI / 2);
+        public VectorSpherical SphericalPosition { get; private set; } = new VectorSpherical(1, 0, MathF.PI / 2);
         public Vector3 Target { get; private set; } = new Vector3(0, 0, 0);
         public Vector3 Up { get; private set; } = new Vector3(0, 1, 0);
-        private const float speed = 0.2f;
+        public float ZoomStep = 0.1f;
         private const float angleDelta = MathF.PI / 360;
 
         public Matrix4 View { get; private set; }
@@ -111,15 +111,15 @@ namespace Lab1.Objects
 
         public void ZoomIn()
         {
-            SphericalPosition.R += speed;
+            SphericalPosition.R += ZoomStep;
             UpdateViewMatrix();
         }
 
         public void ZoomOut()
         {
-            if (SphericalPosition.R > speed)
+            if (SphericalPosition.R > ZoomStep)
             {
-                SphericalPosition.R -= speed;
+                SphericalPosition.R -= ZoomStep;
                 UpdateViewMatrix();
             }
         }
@@ -138,6 +138,23 @@ namespace Lab1.Objects
             Up.Y = MathF.Sin(SphericalPosition.ElevationAngle);
             Up.Z = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);
             UpdateViewMatrix();
+        }
+
+        public void IncreaseZoomStep()
+        {
+            if (ZoomStep < 1) ZoomStep += 0.1f;
+            else if (ZoomStep < 10) ZoomStep += 1;
+            else if (ZoomStep < 100) ZoomStep += 5;
+            else ZoomStep += 10;
+        }
+
+        public void DecreaseZoomStep()
+        {
+            if (ZoomStep > 100) ZoomStep -= 10;
+            else if (ZoomStep > 10) ZoomStep -= 5;
+            else if (ZoomStep > 1) ZoomStep -= 1;
+            else ZoomStep -= 0.1f;
+            if (ZoomStep < 0.1f) ZoomStep = 0.1f;
         }
     }
 }
