@@ -20,21 +20,21 @@ namespace Lab1.Information
                 .AppendLine($"Render time: {RenderTime} ms")
                 .AppendLine($"Vertex count: {model.Vertices.Count}")
                 .AppendLine($"Polygons count: {model.Polygons.Count}")
-                .AppendLine($"Scale: {model.Scale}")
+                .AppendLine($"Scale: {model.Scale:F1}")
                 .AppendLine($"Rotate X: {RadianToDegree(model.XAxisRotate):N0}°")
                 .AppendLine($"Rotate Y: {RadianToDegree(model.YAxisRotate):N0}°")
                 .AppendLine($"Rotate Z: {RadianToDegree(model.ZAxisRotate):N0}°")
-                .AppendLine($"Move: ({model.Translation.X}, {model.Translation.Y}, {model.Translation.Z})")
-                .AppendLine($"R: {camera.SphericalPosition.R}")
+                .AppendLine($"Move: ({model.Translation.X:F2}, {model.Translation.Y:F2}, {model.Translation.Z:F2})")
+                .AppendLine($"R: {camera.SphericalPosition.R:F2}")
                 .AppendLine($"Azimuth angle: {RadianToDegree(camera.SphericalPosition.AzimuthAngle):N0}°")
                 .AppendLine($"Elevation angle: {RadianToDegree(camera.SphericalPosition.ElevationAngle):N0}°")
-                .AppendLine($"Camera position: ({cameraPosition.X}, {cameraPosition.Y}, {cameraPosition.Z})")
+                .AppendLine($"Camera position: ({cameraPosition.X:F2}, {cameraPosition.Y:F2}, {cameraPosition.Z:F2})")
                 .AppendLine($"Camera target: ({camera.Target.X}, {camera.Target.Y}, {camera.Target.Z})")
                 .AppendLine($"FOV: {RadianToDegree(camera.FOV):N0}°")
                 .AppendLine($"Rasterization: {rasterization.GetType().Name}")
                 .AppendLine($"Screen width: {camera.ScreenWidth}")
                 .AppendLine($"Screen height: {camera.ScreenHeight}")
-                .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight}");
+                .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight:F5}");
             return builder.ToString();
         }
 
