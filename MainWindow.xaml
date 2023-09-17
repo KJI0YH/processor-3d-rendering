@@ -13,6 +13,6 @@
         </Grid.ColumnDefinitions>
         <Image x:Name="imgScreen" Grid.Column="0" Grid.ColumnSpan="2"/>
         <TextBlock x:Name="tbInfo" Grid.Column="0" TextWrapping="Wrap" TextAlignment="Left" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Hidden"/>
-        <TextBlock x:Name="tbHelp" Grid.Column="1" TextWrapping="Wrap" TextAlignment="Right" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Hidden" />
+        <TextBlock x:Name="tbHelp" Grid.Column="1" TextWrapping="Wrap" TextAlignment="Right" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Visible" />
     </Grid>
 </Window>

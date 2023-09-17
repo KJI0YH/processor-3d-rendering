@@ -6,29 +6,30 @@ namespace Lab1.Rasterization
 {
     public class Bresenham : IRasterization
     {
-        public IEnumerable<Pixel> Rasterize(float xStart, float yStart, float xEnd, float yEnd)
+        public IEnumerable<Pixel> Rasterize(float x1, float y1, float x2, float y2)
         {
             bool reverce = false;
-            if (Math.Abs(xEnd - xStart) < Math.Abs(yEnd - yStart))
+            if (Math.Abs(x2 - x1) < Math.Abs(y2 - y1))
             {
-                float buffer = xStart;
-                xStart = yStart;
-                yStart = buffer;
-                buffer = xEnd;
-                xEnd = yEnd;
-                yEnd = buffer;
+                float buffer = x1;
+                x1 = y1;
+                y1 = buffer;
+                buffer = x2;
+                x2 = y2;
+                y2 = buffer;
                 reverce = true;
             }
 
-            int x = (int)MathF.Round(xStart);
-            int y = (int)MathF.Round(yStart);
-            float xDelta = Math.Abs(xEnd - xStart);
-            float yDelta = Math.Abs(yEnd - yStart);
-            int xChange = xEnd - xStart > 0 ? 1 : -1;
-            int yChange = yEnd - yStart > 0 ? 1 : -1;
-            float error = 0;
+            int x = (int)MathF.Round(x1);
+            int y = (int)MathF.Round(y1);
+            int xEnd = (int)MathF.Round(x2);
+            int xDelta = (int)Math.Abs(x2 - x1);
+            int yDelta = (int)Math.Abs(y2 - y1);
+            int xChange = x2 - x1 > 0 ? 1 : -1;
+            int yChange = y2 - y1 > 0 ? 1 : -1;
+            int error = 0;
 
-            while (x != (int)MathF.Round(xEnd))
+            do
             {
                 if (reverce) yield return new Pixel(y, x);
                 else yield return new Pixel(x, y);
@@ -40,8 +41,7 @@ namespace Lab1.Rasterization
                     y += yChange;
                     error -= xDelta;
                 }
-
-            }
+            } while (x * xChange < xEnd * xChange);
         }
     }
 }

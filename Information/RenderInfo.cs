@@ -44,23 +44,35 @@ namespace Lab1.Information
             builder
                 .AppendLine("To close the application: Escape")
                 .AppendLine("To open a file: O")
-                .AppendLine("To invert colors: C")
+                .AppendLine("For model rotation: Mouse Drag")
+                .AppendLine("To zoom in|out of the camera: Mouse Wheel")
                 .AppendLine("For rotation around the X axis: X + Mouse Wheel")
                 .AppendLine("For rotation around the Y axis: Y + Mouse Wheel")
                 .AppendLine("For rotation around the Z axis: Z + Mouse Wheel")
                 .AppendLine("For scaling model: Left Ctrl + Mouse Wheel")
                 .AppendLine("To change the FOV: F + Mouse Wheel")
+                .AppendLine("To invert colors: C")
                 .AppendLine("To toggle line drawing: L")
                 .AppendLine("To change the rasterization algorithm: R")
                 .AppendLine("To toggle the render information: I")
-                .AppendLine("To zoom in|out of the camera: Mouse Wheel")
-                .AppendLine("For model rotation: Mouse Drag");
+                .AppendLine("To toggle the help : F1");
+            return builder.ToString();
+        }
+
+        public string GetParseError(string filename, string message)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder
+                .AppendLine($"File {filename} cannot be parsed")
+                .AppendLine($"{message}");
             return builder.ToString();
         }
 
         private float RadianToDegree(float radian)
         {
-            return radian * 180 / MathF.PI;
+            float degree = (radian * 180 / MathF.PI) % 360;
+            if (degree < 0) degree += 360;
+            return degree;
         }
     }
 }

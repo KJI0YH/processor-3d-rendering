@@ -130,5 +130,10 @@ namespace Lab1
             Transformation = RotationX * RotationY * RotationZ * ScaleMatrix * Move;
         }
 
+        public bool IsEmpty()
+        {
+            return Vertices.Count == 0;
+        }
+
     }
 }

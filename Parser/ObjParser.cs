@@ -14,7 +14,7 @@ namespace Lab1.Parser
             var fileStream = new FileStream(filename, FileMode.Open, FileAccess.Read); ;
             using (var streamReader = new StreamReader(fileStream))
             {
-                string line;
+                string line = string.Empty;
                 int lineCount = 0;
                 try
                 {
@@ -43,8 +43,11 @@ namespace Lab1.Parser
                 }
                 catch (ParserException exception)
                 {
-                    //localize exception with lineCount and line
-                    //vertices read
+                    throw new ParserException($"Error in line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
+                }
+                if (model.IsEmpty())
+                {
+                    throw new ParserException($"File does not contain a model in obj format");
                 }
             }
             return model;

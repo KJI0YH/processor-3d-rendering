@@ -8,7 +8,7 @@ namespace Lab1.Objects
         public VectorSpherical SphericalPosition { get; private set; } = new VectorSpherical(5, 0, MathF.PI / 2);
         public Vector3 Target { get; private set; } = new Vector3(0, 0, 0);
         public Vector3 Up { get; private set; } = new Vector3(0, 1, 0);
-        private const float speed = 0.5f;
+        private const float speed = 0.2f;
         private const float angleDelta = MathF.PI / 360;
 
         public Matrix4 View { get; private set; }

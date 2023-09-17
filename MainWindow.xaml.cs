@@ -1,4 +1,5 @@
-﻿using Lab1.Information;
+﻿using Lab1.Exceptions;
+using Lab1.Information;
 using Lab1.Objects;
 using Lab1.Parser;
 using Lab1.Primitives;
@@ -31,7 +32,7 @@ namespace Lab1
         private const Key INFORMATION_TOGGLE_KEY = Key.I;
         private const Key HELP_TOGGLE_KEY = Key.F1;
 
-        private const float scaleDelta = 0.5f;
+        private const float scaleDelta = 0.1f;
         private const float rotationDelta = MathF.PI / 36;
         private const float fovDelta = MathF.PI / 36;
         private bool drawLines = true;
@@ -39,7 +40,7 @@ namespace Lab1
         private OpenFileDialog openFileDialog;
         private ObjParser parser = new ObjParser();
         private WriteableBitmap renderBuffer;
-        private Model model;
+        private Model? model = null;
         private Camera camera = new Camera();
         private RenderInfo renderInfo = new RenderInfo();
 
@@ -64,6 +65,7 @@ namespace Lab1
             rasterizationMethod = rasterizationMethods[rasterizationMethodIndex];
             tbInfo.Foreground = new SolidColorBrush(drawColor);
             tbHelp.Foreground = new SolidColorBrush(drawColor);
+            tbHelp.Text = renderInfo.GetHelp();
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
@@ -86,7 +88,22 @@ namespace Lab1
                 case OPEN_FILE_KEY:
                     if (openFileDialog.ShowDialog() == true)
                     {
-                        model = parser.Parse(openFileDialog.FileName);
+                        model = null;
+                        string filename = openFileDialog.FileName;
+                        try
+                        {
+                            // Clear backround
+                            FillRenderBuffer(fillColor);
+                            model = parser.Parse(filename);
+                        }
+                        catch (ParserException exception)
+                        {
+                            // Show error message
+                            tbInfo.Visibility = Visibility.Visible;
+                            tbInfo.Text = renderInfo.GetParseError(filename, exception.Message);
+                        }
+
+                        // Resetting the camera to initial position
                         camera.ResetPosition();
                     }
                     break;
@@ -100,10 +117,10 @@ namespace Lab1
                     ChangeRasterization();
                     break;
                 case INFORMATION_TOGGLE_KEY:
-                    ChangeVisibility(tbInfo);
+                    ToggleVisibility(tbInfo);
                     break;
                 case HELP_TOGGLE_KEY:
-                    ChangeVisibility(tbHelp);
+                    ToggleVisibility(tbHelp);
                     tbHelp.Text = renderInfo.GetHelp();
                     break;
                 case CLOSE_APP_KEY:
@@ -112,10 +129,8 @@ namespace Lab1
                 default:
                     break;
             }
-            if (model != null && camera != null)
-            {
-                DrawModel(model, camera);
-            }
+            DrawModel(model, camera);
+
         }
 
         private void InitializeRenderBuffer()
@@ -124,9 +139,17 @@ namespace Lab1
             imgScreen.Source = renderBuffer;
         }
 
-        private void DrawModel(Model model, Camera camera)
+        private void DrawModel(Model? model, Camera camera)
         {
+            // Fill background
             FillRenderBuffer(fillColor);
+
+            if (model == null || camera == null)
+            {
+                return;
+            }
+
+            // Projection of each vertex of the model
             List<Vector3> projectedVertices = new List<Vector3>();
             int start = Environment.TickCount;
             foreach (var vertex in model.Vertices)
@@ -136,6 +159,7 @@ namespace Lab1
                 projectedVertices.Add(projectedVertex);
             }
 
+            // Drawing of each visible polygon
             Vector3?[] viewPortVertices = new Vector3?[projectedVertices.Count];
             foreach (var polygon in model.Polygons)
             {
@@ -146,26 +170,33 @@ namespace Lab1
                     Vector3 startVertex = projectedVertices[startVertexIndex];
                     Vector3 endVertex = projectedVertices[endVertexIndex];
 
+                    // Check if the vertices are visible on the screen
                     if (startVertex.X < -1 || startVertex.X > 1 || startVertex.Y < -1 || startVertex.Y > 1 || startVertex.Z < -1 || startVertex.Z > 1) continue;
                     if (endVertex.X < -1 || endVertex.X > 1 || endVertex.Y < -1 || endVertex.Y > 1 || endVertex.Z < -1 || endVertex.Z > 1) continue;
 
+                    // Defining screen coordinates of a vertex, if it has not been processed yet
                     if (viewPortVertices[startVertexIndex] == null)
                         viewPortVertices[startVertexIndex] = camera.ViewPort * startVertex;
                     if (viewPortVertices[endVertexIndex] == null)
                         viewPortVertices[endVertexIndex] = camera.ViewPort * endVertex;
 
+                    // Line drawing
                     if (drawLines)
                     {
                         DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
                     }
+
+                    // Only points drawing
                     else
                     {
-                        DrawPixel((int)viewPortVertices[startVertexIndex].X, (int)viewPortVertices[startVertexIndex].Y, drawColor);
-                        DrawPixel((int)viewPortVertices[endVertexIndex].X, (int)viewPortVertices[endVertexIndex].Y, drawColor);
+                        DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, drawColor);
+                        DrawLine(viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
                     }
                 }
             }
             int stop = Environment.TickCount;
+
+            // Show render information
             renderInfo.RenderTime = stop - start;
             tbInfo.Text = renderInfo.GetInfomation(model, camera, rasterizationMethod);
             tbHelp.Text = renderInfo.GetHelp();
@@ -196,44 +227,44 @@ namespace Lab1
 
         private void DrawPixel(int x, int y, Color color)
         {
+            unsafe
+            {
+                // Get a pointer to the back buffer
+                IntPtr pBackBuffer = renderBuffer.BackBuffer;
+
+                // Find the address of the pixel to draw
+                pBackBuffer += y * renderBuffer.BackBufferStride;
+                pBackBuffer += x * 4;
+
+                // Compute the pixel's color
+                int colorData = color.R << 16;
+                colorData |= color.G << 8;
+                colorData |= color.B << 0;
+
+                // Assign the color data to the pixel
+                *((int*)pBackBuffer) = colorData;
+            }
+
+            // Specify the area of the bitmap that changed
+            renderBuffer.AddDirtyRect(new Int32Rect(x, y, 1, 1));
+        }
+
+        private void DrawLine(float xStart, float yStart, float xEnd, float yEnd, Color color)
+        {
             try
             {
                 // Reserve the back buffer for updates
                 renderBuffer.Lock();
 
-                unsafe
+                foreach (Pixel pixel in rasterizationMethod.Rasterize(xStart, yStart, xEnd, yEnd))
                 {
-                    // Get a pointer to the back buffer
-                    IntPtr pBackBuffer = renderBuffer.BackBuffer;
-
-                    // Find the address of the pixel to draw
-                    pBackBuffer += y * renderBuffer.BackBufferStride;
-                    pBackBuffer += x * 4;
-
-                    // Compute the pixel's color
-                    int colorData = color.R << 16;
-                    colorData |= color.G << 8;
-                    colorData |= color.B << 0;
-
-                    // Assign the color data to the pixel
-                    *((int*)pBackBuffer) = colorData;
+                    DrawPixel(pixel.X, pixel.Y, drawColor);
                 }
-
-                // Specify the area of the bitmap that changed
-                renderBuffer.AddDirtyRect(new Int32Rect(x, y, 1, 1));
             }
             finally
             {
                 // Release the back buffer and make it available for display
                 renderBuffer.Unlock();
-            }
-        }
-
-        private void DrawLine(float xStart, float yStart, float xEnd, float yEnd, Color color)
-        {
-            foreach (Pixel pixel in rasterizationMethod.Rasterize(xStart, yStart, xEnd, yEnd))
-            {
-                DrawPixel(pixel.X, pixel.Y, color);
             }
         }
 
@@ -258,6 +289,10 @@ namespace Lab1
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (model == null)
+            {
+                return;
+            }
             if (e.Delta < 0)
             {
                 if (Keyboard.IsKeyDown(X_AXIS_ROTATION_KEY)) model.XAxisRotate -= rotationDelta;
@@ -294,7 +329,7 @@ namespace Lab1
             rasterizationMethod = rasterizationMethods[++rasterizationMethodIndex % rasterizationMethods.Length];
         }
 
-        private void ChangeVisibility(TextBlock textBlock)
+        private void ToggleVisibility(TextBlock textBlock)
         {
             if (textBlock.Visibility == Visibility.Visible)
             {
