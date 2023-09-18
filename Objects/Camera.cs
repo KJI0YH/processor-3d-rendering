@@ -1,5 +1,6 @@
 ﻿using Lab1.Primitives;
 using System;
+using System.Numerics;
 
 namespace Lab1.Objects
 {
@@ -9,17 +10,18 @@ namespace Lab1.Objects
         public Vector3 Target { get; private set; } = new Vector3(0, 0, 0);
         public Vector3 Up { get; private set; } = new Vector3(0, 1, 0);
         public float ZoomStep = 0.1f;
-        private const float angleDelta = MathF.PI / 360;
+        public const float angleDelta = MathF.PI / 360;
+        public float fovStep = MathF.PI / 180;
 
-        public Matrix4 View { get; private set; }
-        public Matrix4 Projection { get; private set; }
-        public Matrix4 ViewPort { get; private set; }
+        public Matrix4x4 View { get; private set; }
+        public Matrix4x4 Projection { get; private set; }
+        public Matrix4x4 ViewPort { get; private set; }
 
         private float screenWidth = 16;
         private float screenHeight = 9;
         private float fov = MathF.PI / 2;
-        private float zNear = 0;
-        private float zFar = 100;
+        private float zNear = 0.1f;
+        private float zFar = 10000;
 
         public float ScreenWidth
         {
@@ -56,8 +58,8 @@ namespace Lab1.Objects
             {
                 if (fov != value)
                 {
-                    if (value < 0) fov = 0;
-                    else if (value > MathF.PI) fov = MathF.PI;
+                    if (value < fovStep) fov = fovStep;
+                    else if (value >= MathF.PI) fov = MathF.PI - fovStep;
                     else fov = value;
                     UpdateProjectionMatrix();
                 }
@@ -81,32 +83,23 @@ namespace Lab1.Objects
 
         private void UpdateProjectionMatrix()
         {
-            Projection = Matrix4.Projection(fov, screenWidth / screenHeight, zNear, zFar);
+            Projection = Matrix4x4.CreatePerspectiveFieldOfView(fov, screenWidth / screenHeight, zNear, zFar); ;
         }
 
         private void UpdateViewMatrix()
         {
-            Matrix4 matrix = Matrix4.One();
-            Vector3 cartesianPosition = SphericalPosition.ToCartesian();
-            Vector3 zAxis = (cartesianPosition - Target).Normalize();
-            Vector3 xAxis = Up.Cross(zAxis).Normalize();
-            Vector3 yAxis = Up;
-
-            for (int col = 0; col < Vector3.Size; col++)
-            {
-                matrix[0, col] = xAxis[col];
-                matrix[1, col] = yAxis[col];
-                matrix[2, col] = zAxis[col];
-            }
-            matrix[0, 3] = -(xAxis.Dot(cartesianPosition));
-            matrix[1, 3] = -(yAxis.Dot(cartesianPosition));
-            matrix[2, 3] = -(zAxis.Dot(cartesianPosition));
-            View = matrix;
+            View = Matrix4x4.CreateLookAt(SphericalPosition.ToCartesian(), Target, Up);
         }
 
         private void UpdateViewPortMatrix()
         {
-            ViewPort = Matrix4.Viewport(screenWidth - 1, screenHeight - 1, 0, 0);
+            float halfWidth = (screenWidth - 1) / 2;
+            float halfHeight = (screenHeight - 1) / 2;
+            ViewPort = new Matrix4x4(
+                halfWidth, 0, 0, 0,
+                0, -halfHeight, 0, 0,
+                0, 0, 1, 0,
+                halfWidth, halfHeight, 0, 1);
         }
 
         public void ZoomIn()
@@ -134,9 +127,10 @@ namespace Lab1.Objects
         {
             SphericalPosition.ElevationAngle += (float)deltaY * angleDelta;
             Vector3 position = SphericalPosition.ToCartesian();
-            Up.X = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Sin(SphericalPosition.AzimuthAngle);
-            Up.Y = MathF.Sin(SphericalPosition.ElevationAngle);
-            Up.Z = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);
+            float upX = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Sin(SphericalPosition.AzimuthAngle);
+            float upY = MathF.Sin(SphericalPosition.ElevationAngle);
+            float upZ = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);
+            Up = new Vector3(upX, upY, upZ);
             UpdateViewMatrix();
         }
 

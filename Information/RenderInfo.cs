@@ -1,7 +1,7 @@
 ﻿using Lab1.Objects;
-using Lab1.Primitives;
 using Lab1.Rasterization;
 using System;
+using System.Numerics;
 using System.Text;
 
 namespace Lab1.Information
@@ -25,7 +25,7 @@ namespace Lab1.Information
                 .AppendLine($"Rotate X: {RadianToDegree(model.XAxisRotate):N0}°")
                 .AppendLine($"Rotate Y: {RadianToDegree(model.YAxisRotate):N0}°")
                 .AppendLine($"Rotate Z: {RadianToDegree(model.ZAxisRotate):N0}°")
-                .AppendLine($"Move: ({model.Translation.X:F2}, {model.Translation.Y:F2}, {model.Translation.Z:F2})")
+                .AppendLine($"Move: ({model.XPosition:F2}, {model.YPosition:F2}, {model.ZPosition:F2})")
                 .AppendLine($"Move step: {model.MoveStep:F2}")
                 .AppendLine($"R: {camera.SphericalPosition.R:F2}")
                 .AppendLine($"Zoom step: {camera.ZoomStep:F2}")
