@@ -35,7 +35,15 @@ namespace Lab1.Parser
                                 model.AddVertexNormal(ParseVertexNormal(tokens));
                                 break;
                             case "f":
-                                model.AddPolygon(ParsePolygon(tokens, model.Vertices));
+                                Polygon polygon = ParsePolygon(tokens, model.Vertices);
+                                if (polygon.Vertices.Count > 3)
+                                {
+                                    model.AddPolygon(polygon.Triangulate());
+                                }
+                                else
+                                {
+                                    model.AddPolygon(polygon);
+                                }
                                 break;
                             default:
                                 break;

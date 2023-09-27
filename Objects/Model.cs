@@ -116,6 +116,11 @@ namespace Lab1
             Polygons.Add(polygon);
         }
 
+        public void AddPolygon(IEnumerable<Polygon> polygons)
+        {
+            Polygons.AddRange(polygons);
+        }
+
         private void UpdateTransformation()
         {
             Transformation = RotationX * RotationY * RotationZ * ScaleMatrix * Move;
