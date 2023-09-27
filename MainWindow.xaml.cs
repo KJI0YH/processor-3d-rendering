@@ -7,6 +7,7 @@ using Lab1.Rasterization;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -35,9 +36,11 @@ namespace Lab1
         private const Key MOVE_KEY = Key.LeftShift;
         private const Key MOVE_STEP_KEY = Key.M;
         private const Key CONTROL_KEY = Key.LeftCtrl;
+        private const Key NEAR_PLANE_DISTANCE_CHANGE_KEY = Key.N;
+        private const Key FAR_PLANE_DISTANCE_CHANGE_KEY = Key.B;
+        private const Key PLANE_DISTANCE_STEP_KEY = Key.P;
 
         private const float rotationDelta = MathF.PI / 36;
-        private const float fovDelta = MathF.PI / 36;
         private bool drawLines = true;
 
         private OpenFileDialog openFileDialog;
@@ -153,25 +156,25 @@ namespace Lab1
             }
 
             // Projection of each vertex of the model
-            List<Vector3> projectedVertices = new List<Vector3>();
+            List<Vector4> projectedVertices = new List<Vector4>();
             int start = Environment.TickCount;
             foreach (var vertex in model.Vertices)
             {
-                Vector3 projectedVertex = camera.Projection * (camera.View * (model.Transformation * vertex));
-                projectedVertex.Update(projectedVertex / projectedVertex.W);
+                Vector4 projectedVertex = Vector4.Transform(Vector4.Transform(Vector4.Transform(vertex, model.Transformation), camera.View), camera.Projection);
+                projectedVertex /= projectedVertex.W;
                 projectedVertices.Add(projectedVertex);
             }
 
             // Drawing of each visible polygon
-            Vector3?[] viewPortVertices = new Vector3?[projectedVertices.Count];
+            Vector4?[] viewPortVertices = new Vector4?[projectedVertices.Count];
             foreach (var polygon in model.Polygons)
             {
                 for (int i = 0; i < polygon.Indices.Count; i++)
                 {
                     int startVertexIndex = polygon.Indices[i];
                     int endVertexIndex = polygon.Indices[(i + 1) % polygon.Indices.Count];
-                    Vector3 startVertex = projectedVertices[startVertexIndex];
-                    Vector3 endVertex = projectedVertices[endVertexIndex];
+                    Vector4 startVertex = projectedVertices[startVertexIndex];
+                    Vector4 endVertex = projectedVertices[endVertexIndex];
 
                     // Check if the vertices are visible on the screen
                     if (startVertex.X < -1 || startVertex.X > 1 || startVertex.Y < -1 || startVertex.Y > 1 || startVertex.Z < -1 || startVertex.Z > 1) continue;
@@ -179,21 +182,21 @@ namespace Lab1
 
                     // Defining screen coordinates of a vertex, if it has not been processed yet
                     if (viewPortVertices[startVertexIndex] == null)
-                        viewPortVertices[startVertexIndex] = camera.ViewPort * startVertex;
+                        viewPortVertices[startVertexIndex] = Vector4.Transform(startVertex, camera.ViewPort);
                     if (viewPortVertices[endVertexIndex] == null)
-                        viewPortVertices[endVertexIndex] = camera.ViewPort * endVertex;
+                        viewPortVertices[endVertexIndex] = Vector4.Transform(endVertex, camera.ViewPort);
 
                     // Line drawing
                     if (drawLines)
                     {
-                        DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
+                        DrawLine(viewPortVertices[startVertexIndex].Value.X, viewPortVertices[startVertexIndex].Value.Y, viewPortVertices[endVertexIndex].Value.X, viewPortVertices[endVertexIndex].Value.Y, drawColor);
                     }
 
                     // Only points drawing
                     else
                     {
-                        DrawLine(viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, viewPortVertices[startVertexIndex].X, viewPortVertices[startVertexIndex].Y, drawColor);
-                        DrawLine(viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, viewPortVertices[endVertexIndex].X, viewPortVertices[endVertexIndex].Y, drawColor);
+                        DrawLine(viewPortVertices[startVertexIndex].Value.X, viewPortVertices[startVertexIndex].Value.Y, viewPortVertices[startVertexIndex].Value.X, viewPortVertices[startVertexIndex].Value.Y, drawColor);
+                        DrawLine(viewPortVertices[endVertexIndex].Value.X, viewPortVertices[endVertexIndex].Value.Y, viewPortVertices[endVertexIndex].Value.X, viewPortVertices[endVertexIndex].Value.Y, drawColor);
                     }
                 }
             }
@@ -304,11 +307,14 @@ namespace Lab1
                 else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate -= rotationDelta;
                 else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate -= rotationDelta;
                 else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate -= rotationDelta;
-                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= fovDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= camera.FovStep;
                 else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.DecreaseScaleStep();
                 else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale -= model.ScaleStep;
                 else if (Keyboard.IsKeyDown(CONTROL_KEY)) camera.DecreaseZoomStep();
                 else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) model.DecreaseMoveStep();
+                else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZNear -= camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZFar -= camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) camera.DecreasePlaneDistanceStep();
                 else camera.ZoomIn();
             }
             else
@@ -319,11 +325,14 @@ namespace Lab1
                 else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate += rotationDelta;
                 else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate += rotationDelta;
                 else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate += rotationDelta;
-                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += fovDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += camera.FovStep;
                 else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.IncreaseScaleStep();
                 else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale += model.ScaleStep;
                 else if (Keyboard.IsKeyDown(CONTROL_KEY)) camera.IncreaseZoomStep();
                 else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) model.IncreaseMoveStep();
+                else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZNear += camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZFar += camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) camera.IncreasePlaneDistanceStep();
                 else camera.ZoomOut();
             }
             DrawModel(model, camera);

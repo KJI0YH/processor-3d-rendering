@@ -3,6 +3,7 @@ using Lab1.Primitives;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 
 namespace Lab1.Parser
 {
@@ -53,7 +54,7 @@ namespace Lab1.Parser
             return model;
         }
 
-        private Vector3 ParseVertex(string[] tokens)
+        private Vector4 ParseVertex(string[] tokens)
         {
             if (tokens.Length >= 4)
             {
@@ -61,27 +62,27 @@ namespace Lab1.Parser
                 {
                     if (tokens.Length == 5 && float.TryParse(tokens[4], out float w))
                     {
-                        return new Vector3(x, y, z, w);
+                        return new Vector4(x, y, z, w);
                     }
-                    return new Vector3(x, y, z);
+                    return new Vector4(x, y, z, 1);
                 }
             }
             throw new ParserException("Invalid vertex syntax");
         }
 
-        private Vector3 ParseVertexTexture(string[] tokens)
+        private Vector4 ParseVertexTexture(string[] tokens)
         {
             // TODO parse vertex texture
-            return new Vector3();
+            return new Vector4();
         }
 
-        private Vector3 ParseVertexNormal(string[] tokens)
+        private Vector4 ParseVertexNormal(string[] tokens)
         {
             // TODO parse vertex normal
-            return new Vector3();
+            return new Vector4();
         }
 
-        private Polygon ParsePolygon(string[] tokens, List<Vector3> readVertices)
+        private Polygon ParsePolygon(string[] tokens, List<Vector4> readVertices)
         {
             if (tokens.Length >= 4)
             {

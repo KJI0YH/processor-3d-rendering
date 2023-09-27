@@ -1,7 +1,7 @@
 ﻿using Lab1.Objects;
-using Lab1.Primitives;
 using Lab1.Rasterization;
 using System;
+using System.Numerics;
 using System.Text;
 
 namespace Lab1.Information
@@ -25,7 +25,7 @@ namespace Lab1.Information
                 .AppendLine($"Rotate X: {RadianToDegree(model.XAxisRotate):N0}°")
                 .AppendLine($"Rotate Y: {RadianToDegree(model.YAxisRotate):N0}°")
                 .AppendLine($"Rotate Z: {RadianToDegree(model.ZAxisRotate):N0}°")
-                .AppendLine($"Move: ({model.Translation.X:F2}, {model.Translation.Y:F2}, {model.Translation.Z:F2})")
+                .AppendLine($"Move: ({model.XPosition:F2}, {model.YPosition:F2}, {model.ZPosition:F2})")
                 .AppendLine($"Move step: {model.MoveStep:F2}")
                 .AppendLine($"R: {camera.SphericalPosition.R:F2}")
                 .AppendLine($"Zoom step: {camera.ZoomStep:F2}")
@@ -34,6 +34,9 @@ namespace Lab1.Information
                 .AppendLine($"Camera position: ({cameraPosition.X:F2}, {cameraPosition.Y:F2}, {cameraPosition.Z:F2})")
                 .AppendLine($"Camera target: ({camera.Target.X}, {camera.Target.Y}, {camera.Target.Z})")
                 .AppendLine($"FOV: {RadianToDegree(camera.FOV):N0}°")
+                .AppendLine($"Near plane distance: {camera.ZNear}")
+                .AppendLine($"Far plane distance: {camera.ZFar}")
+                .AppendLine($"Plane distance step: {camera.PlaneDistanceStep}")
                 .AppendLine($"Rasterization: {rasterization.GetType().Name}")
                 .AppendLine($"Screen width: {camera.ScreenWidth}")
                 .AppendLine($"Screen height: {camera.ScreenHeight}")
@@ -60,6 +63,9 @@ namespace Lab1.Information
                 .AppendLine("For scaling model: S + Mouse Wheel")
                 .AppendLine("For change scaling step of the model: S + Left Ctrl + Mouse Wheel")
                 .AppendLine("To change the FOV: F + Mouse Wheel")
+                .AppendLine("To change near plane distance: N + Mouse Wheel")
+                .AppendLine("To change far plane distance: B + Mouse Wheel")
+                .AppendLine("To change plane distance step: P + Mouse Wheel")
                 .AppendLine("To invert colors: C")
                 .AppendLine("To toggle line drawing: L")
                 .AppendLine("To change the rasterization algorithm: R")
