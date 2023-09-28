@@ -1,6 +1,6 @@
 ﻿using Lab1.Exceptions;
 using Lab1.Primitives;
-using System;
+using simple_3d_rendering.Exceptions;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -94,27 +94,28 @@ namespace Lab1.Parser
         {
             if (tokens.Length >= 4)
             {
-                Polygon polygon = new Polygon();
+                List<(Vector4, int)> vertices = new();
                 for (int i = 1; i < tokens.Length; i++)
                 {
-                    string[] vertices = tokens[i].Split('/');
-                    if (int.TryParse(vertices[0], out int vertexIndex))
+                    string[] vertexToken = tokens[i].Split('/');
+                    if (int.TryParse(vertexToken[0], out int vertexIndex))
                     {
                         // Correct vertex index to access from early readed vertices
                         if (vertexIndex < 0) vertexIndex += readVertices.Count;
                         else vertexIndex--;
 
-                        try
-                        {
-                            polygon.AddVertex(readVertices, vertexIndex);
-                        }
-                        catch (IndexOutOfRangeException)
-                        {
-                            throw new ParserException("Invalid polygon vertex number index");
-                        }
+                        vertices.Add((readVertices[vertexIndex], vertexIndex));
                     }
                 }
-                return polygon;
+
+                try
+                {
+                    return new Polygon(vertices);
+                }
+                catch (InvalidPolygonException exception)
+                {
+                    throw new ParserException($"Invalid polygon: {exception.Message}");
+                }
             }
             throw new ParserException("Invalid polygon syntax");
         }

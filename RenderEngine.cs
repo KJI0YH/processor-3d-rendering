@@ -228,7 +228,8 @@ namespace simple_3d_rendering
                     // Draw only visible rasterizated polygons
                     case DrawMode.Rasterization:
                         if (IsVertexVisible(vertexA) && IsVertexVisible(vertexB) && IsVertexVisible(vertexC))
-                            DrawPolygon(viewPortVertexA, viewPortVertexB, viewPortVertexC, drawColor, backColor);
+                            if (Vector3.Dot(polygon.Normal, camera.Position) > 0)
+                                DrawPolygon(viewPortVertexA, viewPortVertexB, viewPortVertexC, drawColor, backColor);
                         break;
                 }
             }

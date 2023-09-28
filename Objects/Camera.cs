@@ -7,6 +7,13 @@ namespace Lab1.Objects
     public class Camera
     {
         public VectorSpherical SphericalPosition { get; private set; } = new VectorSpherical(1, 0, MathF.PI / 2);
+        public Vector3 Position
+        {
+            get
+            {
+                return SphericalPosition.ToCartesian();
+            }
+        }
         public Vector3 Target { get; private set; } = new Vector3(0, 0, 0);
         public Vector3 Up { get; private set; } = new Vector3(0, 1, 0);
         public float ZoomStep = 0.1f;

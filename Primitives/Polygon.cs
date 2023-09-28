@@ -1,4 +1,5 @@
-﻿using System;
+﻿using simple_3d_rendering.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -12,10 +13,24 @@ namespace Lab1.Primitives
         public List<int> Indices { get; } = new List<int>();
         public List<Vector4> VerticesTextures { get; } = new List<Vector4>();
         public List<Vector4> VerticesNormals { get; } = new List<Vector4>();
+        public Vector3 Normal { get; private set; }
 
-        public Polygon()
+        public Polygon(List<(Vector4, int)> vertices)
         {
+            if (vertices.Count < 3) throw new InvalidPolygonException("Vertices count less than 3");
 
+            foreach (var vertex in vertices)
+            {
+                Vertices.Add(vertex.Item1);
+                Indices.Add(vertex.Item2);
+            }
+
+            Vector3 a = new Vector3(Vertices[0].X, Vertices[0].Y, Vertices[0].Z);
+            Vector3 b = new Vector3(Vertices[1].X, Vertices[1].Y, Vertices[1].Z);
+            Vector3 c = new Vector3(Vertices[2].X, Vertices[2].Y, Vertices[2].Z);
+            Vector3 ab = b - a;
+            Vector3 ac = c - a;
+            Normal = Vector3.Cross(ab, ac);
         }
 
         public void AddVertex(List<Vector4> readVertices, int vertexIndex)
@@ -76,10 +91,11 @@ namespace Lab1.Primitives
                 int indEarLeft = indEar == 0 ? (Vertices.Count - 1) : (indEar - 1);
 
                 // Clip polygon
-                Polygon polygon = new Polygon();
-                polygon.AddVertex(Vertices[indEar], Indices[indEar]);
-                polygon.AddVertex(Vertices[indEarRight], Indices[indEarRight]);
-                polygon.AddVertex(Vertices[indEarLeft], Indices[indEarLeft]);
+                Polygon polygon = new Polygon(new() {
+                    (Vertices[indEar], Indices[indEar]),
+                    (Vertices[indEarRight], Indices[indEarRight]),
+                    (Vertices[indEarLeft], Indices[indEarLeft]),
+                });
                 triangles.Add(polygon);
 
                 // Delete vertex from main polygon
