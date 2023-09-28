@@ -113,6 +113,61 @@ namespace simple_3d_rendering
             return colorData;
         }
 
+        public void DrawPolygon(Vector4 vertex0, Vector4 vertex1, Vector4 vertex2, Color fillColor, Color edgeColor)
+        {
+            Vector4 buffer;
+            // Select the top vertex (0)
+            if (vertex0.Y > vertex1.Y)
+            {
+                (vertex0, vertex1) = (vertex1, vertex0);
+            }
+
+            if (vertex0.Y > vertex2.Y)
+            {
+                (vertex0, vertex2) = (vertex2, vertex0);
+            }
+
+            // Select the middle (1) and bottom (2) vertex
+            if (vertex1.Y > vertex2.Y)
+            {
+                (vertex1, vertex2) = (vertex2, vertex1);
+            }
+
+            float crossX1, crossX2;
+            float dx1 = vertex1.X - vertex0.X;
+            float dy1 = vertex1.Y - vertex0.Y;
+            float dx2 = vertex2.X - vertex0.X;
+            float dy2 = vertex2.Y - vertex0.Y;
+
+            float topY = vertex0.Y;
+
+            // Draw first part of triangle
+            while (topY < vertex1.Y)
+            {
+                crossX1 = vertex0.X + dx1 / dy1 * (topY - vertex0.Y);
+                crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
+                DrawLine(crossX1, topY, crossX2, topY, fillColor);
+                topY++;
+            }
+
+            dx1 = vertex2.X - vertex1.X;
+            dy1 = vertex2.Y - vertex1.Y;
+
+            // Draw second part of triangle
+            while (topY < vertex2.Y)
+            {
+                crossX1 = vertex1.X + dx1 / dy1 * (topY - vertex1.Y);
+                crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
+                DrawLine(crossX1, topY, crossX2, topY, fillColor);
+                topY++;
+            }
+
+            // Draw edges of the triangle 
+            DrawLine(vertex0.X, vertex0.Y, vertex1.X, vertex1.Y, edgeColor);
+            DrawLine(vertex0.X, vertex0.Y, vertex2.X, vertex2.Y, edgeColor);
+            DrawLine(vertex1.X, vertex1.Y, vertex2.X, vertex2.Y, edgeColor);
+        }
+
         public void DrawModel(Model model, Camera camera, Color drawColor, Color backColor, DrawMode drawMode)
         {
             // Fill background
@@ -172,6 +227,8 @@ namespace simple_3d_rendering
 
                     // Draw only visible rasterizated polygons
                     case DrawMode.Rasterization:
+                        if (IsVertexVisible(vertexA) && IsVertexVisible(vertexB) && IsVertexVisible(vertexC))
+                            DrawPolygon(viewPortVertexA, viewPortVertexB, viewPortVertexC, drawColor, backColor);
                         break;
                 }
             }
