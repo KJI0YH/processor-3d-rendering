@@ -2,8 +2,8 @@
 using Lab1.Objects;
 using Lab1.Primitives;
 using Lab1.Rasterization;
+using simple_3d_rendering.Primitives;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Windows;
 using System.Windows.Media;
@@ -21,10 +21,12 @@ namespace simple_3d_rendering
     public class RenderEngine
     {
         public readonly WriteableBitmap RenderBuffer;
+        private double?[,] zBuffer;
         private readonly int _width;
         private readonly int _height;
         private readonly int _bytesPerPixel;
         private readonly int _stride;
+        Random random = new Random();
 
         public IRasterization Rasterization = new Bresenham();
 
@@ -33,6 +35,7 @@ namespace simple_3d_rendering
             _width = pixelWidth;
             _height = pixelHeight;
             RenderBuffer = new WriteableBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgr32, null);
+            zBuffer = new double?[_width, _height];
             _bytesPerPixel = (RenderBuffer.Format.BitsPerPixel + 7) / 8;
             _stride = _width * _bytesPerPixel;
         }
@@ -115,7 +118,10 @@ namespace simple_3d_rendering
 
         public void DrawPolygon(Vector4 vertex0, Vector4 vertex1, Vector4 vertex2, Color fillColor, Color edgeColor)
         {
-            Vector4 buffer;
+            byte[] bytes = new byte[3];
+            random.NextBytes(bytes);
+            fillColor = Color.FromRgb(bytes[0], bytes[1], bytes[2]);
+
             // Select the top vertex (0)
             if (vertex0.Y > vertex1.Y)
             {
@@ -138,6 +144,17 @@ namespace simple_3d_rendering
             float dy1 = vertex1.Y - vertex0.Y;
             float dx2 = vertex2.X - vertex0.X;
             float dy2 = vertex2.Y - vertex0.Y;
+            float dz1 = vertex1.Z - vertex0.Z;
+            float dz2 = vertex2.Z - vertex0.Z;
+
+            Vector3 ba = new Vector3(dx1, dy1, dz1);
+            Vector3 ca = new Vector3(dx2, dy2, dz2);
+            Vector3 normal = Vector3.Normalize(Vector3.Cross(ba, ca));
+
+            // Draw edges of the triangle 
+            DrawLine(vertex0.X, vertex0.Y, vertex1.X, vertex1.Y, edgeColor);
+            DrawLine(vertex0.X, vertex0.Y, vertex2.X, vertex2.Y, edgeColor);
+            DrawLine(vertex1.X, vertex1.Y, vertex2.X, vertex2.Y, edgeColor);
 
             float topY = vertex0.Y;
 
@@ -161,83 +178,77 @@ namespace simple_3d_rendering
                 DrawLine(crossX1, topY, crossX2, topY, fillColor);
                 topY++;
             }
-
-            // Draw edges of the triangle 
-            DrawLine(vertex0.X, vertex0.Y, vertex1.X, vertex1.Y, edgeColor);
-            DrawLine(vertex0.X, vertex0.Y, vertex2.X, vertex2.Y, edgeColor);
-            DrawLine(vertex1.X, vertex1.Y, vertex2.X, vertex2.Y, edgeColor);
         }
 
         public void DrawModel(Model model, Camera camera, Color drawColor, Color backColor, DrawMode drawMode)
         {
             // Fill background
             FillRenderBuffer(backColor);
+            ResetZBuffer();
 
             // Projection of each vertex of the model
-            List<Vector4> projectedVertices = new();
             foreach (var vertex in model.Vertices)
             {
-                Vector4 projectedVertex = Vector4.Transform(Vector4.Transform(Vector4.Transform(vertex, model.Transformation), camera.View), camera.Projection);
-
-                // Perspective model
-                projectedVertex /= projectedVertex.W;
-                projectedVertices.Add(projectedVertex);
+                vertex.Transform = Vector4.Transform(vertex.Original, model.Transformation);
+                vertex.CameraView = Vector4.Transform(vertex.Transform, camera.View);
+                vertex.Projected = Vector4.Transform(vertex.CameraView, camera.Projection);
+                vertex.Perspective = vertex.Projected / vertex.Projected.W;
+                vertex.ViewPort = Vector4.Transform(vertex.Perspective, camera.ViewPort);
             }
 
-            // Drawing of each visible polygon
-            Vector4?[] viewPortVertices = new Vector4?[projectedVertices.Count];
+            // Drawing of each visible object
             foreach (var polygon in model.Polygons)
             {
-                int indVertexA = polygon.Indices[0];
-                int indVertexB = polygon.Indices[1];
-                int indVertexC = polygon.Indices[2];
-                Vector4 vertexA = projectedVertices[indVertexA];
-                Vector4 vertexB = projectedVertices[indVertexB];
-                Vector4 vertexC = projectedVertices[indVertexC];
-
-                if (viewPortVertices[indVertexA] == null) viewPortVertices[indVertexA] = Vector4.Transform(projectedVertices[indVertexA], camera.ViewPort);
-                if (viewPortVertices[indVertexB] == null) viewPortVertices[indVertexB] = Vector4.Transform(projectedVertices[indVertexB], camera.ViewPort);
-                if (viewPortVertices[indVertexC] == null) viewPortVertices[indVertexC] = Vector4.Transform(projectedVertices[indVertexC], camera.ViewPort);
-
-                Vector4 viewPortVertexA = viewPortVertices[indVertexA].Value;
-                Vector4 viewPortVertexB = viewPortVertices[indVertexB].Value;
-                Vector4 viewPortVertexC = viewPortVertices[indVertexC].Value;
+                Vertex vertexA = polygon.Vertices[0];
+                Vertex vertexB = polygon.Vertices[1];
+                Vertex vertexC = polygon.Vertices[2];
 
                 switch (drawMode)
                 {
                     // Draw only visible vertices
                     case DrawMode.VertexOnly:
-                        if (IsVertexVisible(vertexA))
-                            DrawPixel(viewPortVertexA.X, viewPortVertexA.Y, drawColor);
-                        if (IsVertexVisible(vertexB))
-                            DrawPixel(viewPortVertexB.X, viewPortVertexB.Y, drawColor);
-                        if (IsVertexVisible(vertexC))
-                            DrawPixel(viewPortVertexC.X, viewPortVertexC.Y, drawColor);
+                        if (IsVertexVisible(vertexA.Perspective))
+                            DrawPixel(vertexA.ViewPort.X, vertexA.ViewPort.Y, drawColor);
+                        if (IsVertexVisible(vertexB.Perspective))
+                            DrawPixel(vertexB.ViewPort.X, vertexB.ViewPort.Y, drawColor);
+                        if (IsVertexVisible(vertexC.Perspective))
+                            DrawPixel(vertexC.ViewPort.X, vertexC.ViewPort.Y, drawColor);
                         break;
 
                     // Draw only visible lines
                     case DrawMode.Wire:
-                        if (IsVertexVisible(vertexA) && IsVertexVisible(vertexB))
-                            DrawLine(viewPortVertexA.X, viewPortVertexA.Y, viewPortVertexB.X, viewPortVertexB.Y, drawColor);
-                        if (IsVertexVisible(vertexA) && IsVertexVisible(vertexC))
-                            DrawLine(viewPortVertexA.X, viewPortVertexA.Y, viewPortVertexC.X, viewPortVertexC.Y, drawColor);
-                        if (IsVertexVisible(vertexB) && IsVertexVisible(vertexC))
-                            DrawLine(viewPortVertexB.X, viewPortVertexB.Y, viewPortVertexC.X, viewPortVertexC.Y, drawColor);
+                        if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective))
+                            DrawLine(vertexA.ViewPort.X, vertexA.ViewPort.Y, vertexB.ViewPort.X, vertexB.ViewPort.Y, drawColor);
+                        if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexC.Perspective))
+                            DrawLine(vertexA.ViewPort.X, vertexA.ViewPort.Y, vertexC.ViewPort.X, vertexC.ViewPort.Y, drawColor);
+                        if (IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
+                            DrawLine(vertexB.ViewPort.X, vertexB.ViewPort.Y, vertexC.ViewPort.X, vertexC.ViewPort.Y, drawColor);
                         break;
 
                     // Draw only visible rasterizated polygons
                     case DrawMode.Rasterization:
-                        if (IsVertexVisible(vertexA) && IsVertexVisible(vertexB) && IsVertexVisible(vertexC))
-                            if (Vector3.Dot(polygon.Normal, camera.Position) > 0)
-                                DrawPolygon(viewPortVertexA, viewPortVertexB, viewPortVertexC, drawColor, backColor);
+                        if (Vector3.Dot(polygon.Normal, -camera.Position) > 0)
+                            if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
+                                DrawPolygon(vertexA.ViewPort, vertexB.ViewPort, vertexC.ViewPort, drawColor, backColor);
                         break;
                 }
             }
         }
 
-        private bool IsVertexVisible(Vector4 vertex)
+        private bool IsVertexVisible(Vector4 perspectiveVertex)
         {
-            return (vertex.X >= -1 && vertex.X <= 1 && vertex.Y >= -1 && vertex.Y <= 1 && vertex.Z >= -1 && vertex.Z <= 1);
+            return (perspectiveVertex.X >= -1 && perspectiveVertex.X <= 1 && perspectiveVertex.Y >= -1 && perspectiveVertex.Y <= 1 && perspectiveVertex.Z >= -1 && perspectiveVertex.Z <= 1);
+        }
+
+        private void ResetZBuffer()
+        {
+            for (int i = 0; i < zBuffer.GetLength(0); i++)
+            {
+                for (int j = 0; j < zBuffer.GetLength(1); j++)
+                {
+                    zBuffer[i, j] = null;
+                }
+            }
         }
     }
 }

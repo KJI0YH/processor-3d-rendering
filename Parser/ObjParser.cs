@@ -1,6 +1,7 @@
 ﻿using Lab1.Exceptions;
 using Lab1.Primitives;
 using simple_3d_rendering.Exceptions;
+using simple_3d_rendering.Primitives;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -16,7 +17,7 @@ namespace Lab1.Parser
             using (var streamReader = new StreamReader(fileStream))
             {
                 string line = string.Empty;
-                int lineCount = 0;
+                int lineCount = 0, vertexCount = 0;
                 try
                 {
                     while ((line = streamReader.ReadLine()) != null)
@@ -26,13 +27,11 @@ namespace Lab1.Parser
                         switch (tokens[0])
                         {
                             case "v":
-                                model.AddVertex(ParseVertex(tokens));
+                                model.AddVertex(ParseVertex(tokens, ++vertexCount));
                                 break;
                             case "vt":
-                                model.AddVertexTexture(ParseVertexTexture(tokens));
                                 break;
                             case "vn":
-                                model.AddVertexNormal(ParseVertexNormal(tokens));
                                 break;
                             case "f":
                                 Polygon polygon = ParsePolygon(tokens, model.Vertices);
@@ -62,7 +61,7 @@ namespace Lab1.Parser
             return model;
         }
 
-        private Vector4 ParseVertex(string[] tokens)
+        private Vertex ParseVertex(string[] tokens, int vertexIndex)
         {
             if (tokens.Length >= 4)
             {
@@ -70,9 +69,9 @@ namespace Lab1.Parser
                 {
                     if (tokens.Length == 5 && float.TryParse(tokens[4], out float w))
                     {
-                        return new Vector4(x, y, z, w);
+                        return new Vertex(new Vector4(x, y, z, w), vertexIndex);
                     }
-                    return new Vector4(x, y, z, 1);
+                    return new Vertex(new Vector4(x, y, z, 1), vertexIndex);
                 }
             }
             throw new ParserException("Invalid vertex syntax");
@@ -90,11 +89,11 @@ namespace Lab1.Parser
             return new Vector4();
         }
 
-        private Polygon ParsePolygon(string[] tokens, List<Vector4> readVertices)
+        private Polygon ParsePolygon(string[] tokens, List<Vertex> readVertices)
         {
             if (tokens.Length >= 4)
             {
-                List<(Vector4, int)> vertices = new();
+                List<Vertex> vertices = new();
                 for (int i = 1; i < tokens.Length; i++)
                 {
                     string[] vertexToken = tokens[i].Split('/');
@@ -104,7 +103,7 @@ namespace Lab1.Parser
                         if (vertexIndex < 0) vertexIndex += readVertices.Count;
                         else vertexIndex--;
 
-                        vertices.Add((readVertices[vertexIndex], vertexIndex));
+                        vertices.Add(readVertices[vertexIndex]);
                     }
                 }
 
