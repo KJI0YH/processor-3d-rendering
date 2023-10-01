@@ -116,12 +116,20 @@ namespace simple_3d_rendering
             return colorData;
         }
 
-        public void DrawPolygon(Vector4 vertex0, Vector4 vertex1, Vector4 vertex2, Color fillColor, Color edgeColor)
+        private Color GetPolygonColor(Color lightColor, Color surfaceColor, Vector3 lightPosition, Polygon polygon)
         {
-            byte[] bytes = new byte[3];
-            random.NextBytes(bytes);
-            fillColor = Color.FromRgb(bytes[0], bytes[1], bytes[2]);
+            Color color = new Color();
+            float intensity = Math.Max(Vector3.Dot(Vector3.Normalize(lightPosition), Vector3.Normalize(polygon.Normal)), 0);
+            Vector3 light = new Vector3(lightColor.R / 255, lightColor.G / 255, lightColor.B / 255);
+            Vector3 surface = new Vector3(surfaceColor.R / 255, surfaceColor.G / 255, surfaceColor.B / 255);
+            color.R = (byte)(MathF.Round(intensity * light.X * surface.X * 255));
+            color.G = (byte)(MathF.Round(intensity * light.Y * surface.Y * 255));
+            color.B = (byte)(MathF.Round(intensity * light.Z * surface.Z * 255));
+            return color;
+        }
 
+        public void DrawPolygon(Vector4 vertex0, Vector4 vertex1, Vector4 vertex2, Color surfaceColor, Color edgeColor)
+        {
             // Select the top vertex (0)
             if (vertex0.Y > vertex1.Y)
             {
@@ -163,7 +171,7 @@ namespace simple_3d_rendering
             {
                 crossX1 = vertex0.X + dx1 / dy1 * (topY - vertex0.Y);
                 crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
-                DrawLine(crossX1, topY, crossX2, topY, fillColor);
+                DrawLine(crossX1, topY, crossX2, topY, surfaceColor);
                 topY++;
             }
 
@@ -175,7 +183,7 @@ namespace simple_3d_rendering
             {
                 crossX1 = vertex1.X + dx1 / dy1 * (topY - vertex1.Y);
                 crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
-                DrawLine(crossX1, topY, crossX2, topY, fillColor);
+                DrawLine(crossX1, topY, crossX2, topY, surfaceColor);
                 topY++;
             }
         }
@@ -229,7 +237,10 @@ namespace simple_3d_rendering
                     case DrawMode.Rasterization:
                         if (Vector3.Dot(polygon.Normal, -camera.Position) > 0)
                             if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
-                                DrawPolygon(vertexA.ViewPort, vertexB.ViewPort, vertexC.ViewPort, drawColor, backColor);
+                            {
+                                Color polygonColor = GetPolygonColor(Colors.White, Colors.White, -camera.Position, polygon);
+                                DrawPolygon(vertexA.ViewPort, vertexB.ViewPort, vertexC.ViewPort, polygonColor, Colors.Black);
+                            }
                         break;
                 }
             }

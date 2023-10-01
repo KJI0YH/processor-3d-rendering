@@ -66,9 +66,9 @@ namespace Lab1.Primitives
 
                 // Clip polygon
                 Polygon polygon = new Polygon(new() {
-                    Vertices[indEarRight],
                     Vertices[indEar],
-                    Vertices[indEarLeft]
+                    Vertices[indEarRight],
+                    Vertices[indEarLeft],
                 });
                 triangles.Add(polygon);
 
@@ -81,9 +81,10 @@ namespace Lab1.Primitives
 
         private Vector3 GetNormal()
         {
-            Vector4 ab = Vertices[1].Transform - Vertices[0].Transform;
+            Vector4 ab = Vertices[0].Transform - Vertices[1].Transform;
             Vector4 ac = Vertices[2].Transform - Vertices[0].Transform;
-            return Vector3.Cross(new Vector3(ab.X, ab.Y, ab.Z), new Vector3(ac.X, ac.Y, ac.Z));
+            return Vector3.Normalize(Vector3.Cross(new Vector3(ab.X, ab.Y, ab.Z), new Vector3(ac.X, ac.Y, ac.Z)));
+
         }
     }
 }
