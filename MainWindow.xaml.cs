@@ -50,8 +50,12 @@ namespace Lab1
         private readonly RenderInfo renderInfo = new();
 
         private Point mouseClickPosition;
-        private Color fillColor = Colors.Black;
-        private Color drawColor = Colors.White;
+        private static Color backgroundColor = Colors.Black;
+        private static Color backgroundColorInvert = Colors.White;
+        private static Color surfaceColor = Colors.White;
+        private static Color lightColor = Colors.Aqua;
+        private static Color rasterizedEdgeColor = Colors.Black;
+        private static Color edgeColor = backgroundColorInvert;
 
         private int rasterizationMethodIndex = 0;
         private readonly IRasterization[] rasterizationMethods = new IRasterization[]
@@ -67,8 +71,8 @@ namespace Lab1
             {
                 Filter = "Wavefront files (.obj)|*.obj"
             };
-            tbInfo.Foreground = new SolidColorBrush(drawColor);
-            tbHelp.Foreground = new SolidColorBrush(drawColor);
+            tbInfo.Foreground = new SolidColorBrush(surfaceColor);
+            tbHelp.Foreground = new SolidColorBrush(surfaceColor);
             tbHelp.Text = renderInfo.GetHelp();
         }
 
@@ -96,7 +100,7 @@ namespace Lab1
                         try
                         {
                             // Clear backround
-                            renderEngine.FillRenderBuffer(fillColor);
+                            renderEngine.FillRenderBuffer(backgroundColor);
                             model = parser.Parse(filename);
                         }
                         catch (ParserException exception)
@@ -115,9 +119,11 @@ namespace Lab1
                     break;
                 case WIRE_DRAW_MODE_KEY:
                     drawMode = DrawMode.Wire;
+                    edgeColor = backgroundColorInvert;
                     break;
                 case RASTERIZATION_DRAW_MODE_KEY:
                     drawMode = DrawMode.Rasterization;
+                    edgeColor = rasterizedEdgeColor;
                     break;
                 case INVERT_COLORS_KEY:
                     InvertColors();
@@ -145,7 +151,7 @@ namespace Lab1
         private void InitializeRenderBuffer()
         {
             renderEngine = new RenderEngine((int)camera.ScreenWidth, (int)camera.ScreenHeight);
-            renderEngine.FillRenderBuffer(fillColor);
+            renderEngine.FillRenderBuffer(backgroundColor);
             imgScreen.Source = renderEngine.RenderBuffer;
         }
 
@@ -154,7 +160,7 @@ namespace Lab1
             if (model == null) return;
 
             int start = Environment.TickCount;
-            renderEngine.DrawModel(model, camera, drawColor, fillColor, drawMode);
+            renderEngine.DrawModel(model, camera, backgroundColor, surfaceColor, edgeColor, lightColor, drawMode);
             int stop = Environment.TickCount;
 
             // Show render information
@@ -229,10 +235,14 @@ namespace Lab1
 
         private void InvertColors()
         {
-            Color buffer = fillColor;
-            fillColor = drawColor;
-            drawColor = buffer;
-            Brush textBrush = new SolidColorBrush(drawColor);
+            (backgroundColor, backgroundColorInvert) = (backgroundColorInvert, backgroundColor);
+
+            if (drawMode != DrawMode.Rasterization)
+            {
+                edgeColor = backgroundColorInvert;
+            }
+
+            Brush textBrush = new SolidColorBrush(backgroundColorInvert);
             tbInfo.Foreground = textBrush;
             tbHelp.Foreground = textBrush;
         }

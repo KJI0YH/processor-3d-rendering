@@ -36,19 +36,19 @@ namespace Lab1.Primitives
                 return new List<Polygon>() { this };
             }
 
-            List<Polygon> triangles = new List<Polygon>();
+            List<Polygon> triangles = new();
 
             while (Vertices.Count >= 3)
             {
-                List<double> relativeEarArea = new List<double>();
+                List<double> relativeEarArea = new();
                 for (int i = 0; i < Vertices.Count; i++)
                 {
                     int indA = i;
                     int indB = (i + 1) % Vertices.Count;
                     int indC = (i == 0) ? (Vertices.Count - 1) : (i - 1);
-                    Point3D pA = new Point3D(Vertices[indA].Original.X, Vertices[indA].Original.Y, Vertices[indA].Original.Z); ;
-                    Point3D pB = new Point3D(Vertices[indB].Original.X, Vertices[indB].Original.Y, Vertices[indB].Original.Z);
-                    Point3D pC = new Point3D(Vertices[indC].Original.X, Vertices[indC].Original.Y, Vertices[indC].Original.Z);
+                    Point3D pA = new(Vertices[indA].Original.X, Vertices[indA].Original.Y, Vertices[indA].Original.Z); ;
+                    Point3D pB = new(Vertices[indB].Original.X, Vertices[indB].Original.Y, Vertices[indB].Original.Z);
+                    Point3D pC = new(Vertices[indC].Original.X, Vertices[indC].Original.Y, Vertices[indC].Original.Z);
                     Vector3D BA = pB - pA;
                     Vector3D CB = pC - pB;
                     Vector3D AC = pA - pC;
@@ -65,7 +65,7 @@ namespace Lab1.Primitives
                 int indEarLeft = indEar == 0 ? (Vertices.Count - 1) : (indEar - 1);
 
                 // Clip polygon
-                Polygon polygon = new Polygon(new() {
+                Polygon polygon = new(new() {
                     Vertices[indEar],
                     Vertices[indEarRight],
                     Vertices[indEarLeft],

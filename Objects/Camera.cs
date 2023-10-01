@@ -164,7 +164,6 @@ namespace Lab1.Objects
         public void MoveZenith(double deltaY)
         {
             SphericalPosition.ElevationAngle += (float)deltaY * AngleDelta;
-            Vector3 position = SphericalPosition.ToCartesian();
             float upX = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Sin(SphericalPosition.AzimuthAngle);
             float upY = MathF.Sin(SphericalPosition.ElevationAngle);
             float upZ = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);

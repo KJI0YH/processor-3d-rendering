@@ -12,7 +12,7 @@ namespace Lab1.Parser
     {
         public Model Parse(string filename)
         {
-            Model model = new Model();
+            Model model = new();
             var fileStream = new FileStream(filename, FileMode.Open, FileAccess.Read); ;
             using (var streamReader = new StreamReader(fileStream))
             {
@@ -75,18 +75,6 @@ namespace Lab1.Parser
                 }
             }
             throw new ParserException("Invalid vertex syntax");
-        }
-
-        private Vector4 ParseVertexTexture(string[] tokens)
-        {
-            // TODO parse vertex texture
-            return new Vector4();
-        }
-
-        private Vector4 ParseVertexNormal(string[] tokens)
-        {
-            // TODO parse vertex normal
-            return new Vector4();
         }
 
         private Polygon ParsePolygon(string[] tokens, List<Vertex> readVertices)
