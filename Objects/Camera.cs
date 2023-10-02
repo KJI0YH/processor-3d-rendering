@@ -1,5 +1,6 @@
 ﻿using Lab1.Primitives;
 using System;
+using System.Linq;
 using System.Numerics;
 
 namespace Lab1.Objects
@@ -111,14 +112,6 @@ namespace Lab1.Objects
             UpdateViewPortMatrix();
         }
 
-        public void ResetPosition()
-        {
-            SphericalPosition = new VectorSpherical(5, 0, MathF.PI / 2);
-            Target = new Vector3(0, 0, 0);
-            Up = new Vector3(0, 1, 0);
-            UpdateViewMatrix();
-        }
-
         private void UpdateProjectionMatrix()
         {
             Projection = Matrix4x4.CreatePerspectiveFieldOfView(fov, screenWidth / screenHeight, zNear, zFar);
@@ -203,6 +196,29 @@ namespace Lab1.Objects
             else if (PlaneDistanceStep > 1) PlaneDistanceStep -= 1;
             else PlaneDistanceStep -= 0.1f;
             if (PlaneDistanceStep < 0.1f) PlaneDistanceStep = 0.1f;
+        }
+
+        public void SetInitialPosition(Model model)
+        {
+            float xMax = model.Vertices.Max(v => v.Original.X);
+            float xMin = model.Vertices.Min(v => v.Original.X);
+            float yMax = model.Vertices.Max(v => v.Original.Y);
+            float yMin = model.Vertices.Min(v => v.Original.Y);
+            float zMax = model.Vertices.Max(v => v.Original.Z);
+            float zMin = model.Vertices.Min(v => v.Original.Z);
+            float[] radiuses = new float[]
+            {
+                xMax - xMin,
+                yMax - yMin,
+                zMax - zMin
+            };
+            float distance = radiuses.Max() + zMax - zMin;
+            SphericalPosition = new VectorSpherical(distance, 0, MathF.PI / 2);
+            Target = new Vector3(0, 0, 0);
+            Up = new Vector3(0, 1, 0);
+            zFar = 3 * distance;
+            UpdateViewMatrix();
+            UpdateProjectionMatrix();
         }
     }
 }

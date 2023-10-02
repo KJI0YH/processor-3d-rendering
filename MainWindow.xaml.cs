@@ -103,6 +103,7 @@ namespace Lab1
                             renderEngine.FillRenderBuffer(backgroundColor);
                             model = parser.Parse(filename);
                             model.MoveToWorldCenter();
+                            camera.SetInitialPosition(model);
                         }
                         catch (ParserException exception)
                         {
@@ -110,9 +111,6 @@ namespace Lab1
                             tbInfo.Visibility = Visibility.Visible;
                             tbInfo.Text = renderInfo.GetParseError(filename, exception.Message);
                         }
-
-                        // Resetting the camera to initial position
-                        camera.ResetPosition();
                     }
                     break;
                 case VERTEX_ONLY_DRAW_MODE_KEY:
