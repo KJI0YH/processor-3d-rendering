@@ -41,7 +41,7 @@ namespace Lab1.Rasterization
             } while (x * xChange < xEnd * xChange);
         }
 
-        public IEnumerable<Pixel> Rasterize(Vector4 start, Vector4 end)
+        public IEnumerable<Pixel> Rasterize(Vector3 start, Vector3 end)
         {
             bool reverce = false;
             if (Math.Abs(end.X - start.X) < Math.Abs(end.Y - start.Y))

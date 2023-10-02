@@ -28,7 +28,7 @@ namespace Lab1.Rasterization
             }
         }
 
-        public IEnumerable<Pixel> Rasterize(Vector4 start, Vector4 end)
+        public IEnumerable<Pixel> Rasterize(Vector3 start, Vector3 end)
         {
             float xDelta = end.X - start.X;
             float yDelta = end.Y - start.Y;

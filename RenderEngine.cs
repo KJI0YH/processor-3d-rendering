@@ -75,7 +75,7 @@ namespace simple_3d_rendering
         }
 
         // Line drawing with pixel depth
-        public void DrawLine(Vector4 start, Vector4 end, Color color)
+        public void DrawLine(Vector3 start, Vector3 end, Color color)
         {
             int colorData = GetColorData(color);
             try
@@ -184,9 +184,9 @@ namespace simple_3d_rendering
             float dz2 = vertex2.Z - vertex0.Z;
 
             // Draw edges of the triangle 
-            DrawLine(vertex0, vertex1, edgeColor);
-            DrawLine(vertex0, vertex2, edgeColor);
-            DrawLine(vertex1, vertex2, edgeColor);
+            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
+            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
 
             float topY = vertex0.Y;
             float topZ = vertex0.Z;
@@ -199,7 +199,7 @@ namespace simple_3d_rendering
                 crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
                 crossZ1 = vertex0.Z + dz1 / dy1 * (topZ - vertex0.Z);
                 crossZ2 = vertex0.Z + dz2 / dy2 * (topZ - vertex0.Z);
-                DrawLine(new Vector4(crossX1, topY, crossZ1, 1.0f), new Vector4(crossX2, topY, crossZ2, 1.0f), surfaceColor);
+                DrawLine(new Vector3(crossX1, topY, crossZ1), new Vector3(crossX2, topY, crossZ2), surfaceColor);
                 topY++;
                 topZ += dz;
             }
@@ -216,7 +216,7 @@ namespace simple_3d_rendering
                 crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
                 crossZ1 = vertex1.Z + dz1 / dy1 * (topZ - vertex1.Z);
                 crossZ2 = vertex0.Z + dz2 / dy2 * (topZ - vertex0.Z);
-                DrawLine(new Vector4(crossX1, topY, crossZ1, 1.0f), new Vector4(crossX2, topY, crossZ2, 1.0f), surfaceColor);
+                DrawLine(new Vector3(crossX1, topY, crossZ1), new Vector3(crossX2, topY, crossZ2), surfaceColor);
                 topY++;
                 topZ += dz;
             }
