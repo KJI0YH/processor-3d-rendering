@@ -53,6 +53,7 @@ namespace simple_3d_rendering
             RenderBuffer.WritePixels(new Int32Rect(0, 0, _width, _height), pixelData, _stride, 0);
         }
 
+        // Line drawing without pixel depth
         public void DrawLine(float xStart, float yStart, float xEnd, float yEnd, Color color)
         {
             int colorData = GetColorData(color);
@@ -73,24 +74,22 @@ namespace simple_3d_rendering
             }
         }
 
-        public void DrawLine(float xStart, float yStart, float zStart, float xEnd, float yEnd, float zEnd, Color color)
+        // Line drawing with pixel depth
+        public void DrawLine(Vector4 start, Vector4 end, Color color)
         {
             int colorData = GetColorData(color);
-            float dz = (zEnd - zStart) / (xEnd - xStart);
             try
             {
                 // Reserve the back buffer for updates
                 RenderBuffer.Lock();
 
-                foreach (Pixel pixel in Rasterization.Rasterize(xStart, yStart, xEnd, yEnd))
+                foreach (Pixel pixel in Rasterization.Rasterize(start, end))
                 {
-                    if (zBuffer[pixel.X, pixel.Y] > zStart)
+                    if (zBuffer[pixel.X, pixel.Y] > pixel.Depth)
                     {
-                        zBuffer[pixel.X, pixel.Y] = zStart;
+                        zBuffer[pixel.X, pixel.Y] = pixel.Depth;
                         SetPixelData(pixel.X, pixel.Y, colorData);
-
                     }
-                    zStart += dz;
                 }
             }
             finally
@@ -154,9 +153,12 @@ namespace simple_3d_rendering
             return color;
         }
 
-        public void DrawPolygon(Vector4 vertex0, Vector4 vertex1, Vector4 vertex2, Color surfaceColor, Color edgeColor)
+        public void DrawPolygon(Polygon polygon, Color surfaceColor, Color edgeColor)
         {
             // Select the top vertex (0)
+            Vector4 vertex0 = polygon.Vertices[0].ViewPort;
+            Vector4 vertex1 = polygon.Vertices[1].ViewPort;
+            Vector4 vertex2 = polygon.Vertices[2].ViewPort;
             if (vertex0.Y > vertex1.Y)
             {
                 (vertex0, vertex1) = (vertex1, vertex0);
@@ -182,9 +184,9 @@ namespace simple_3d_rendering
             float dz2 = vertex2.Z - vertex0.Z;
 
             // Draw edges of the triangle 
-            DrawLine(vertex0.X, vertex0.Y, vertex0.Z, vertex1.X, vertex1.Y, vertex1.Z, edgeColor);
-            DrawLine(vertex0.X, vertex0.Y, vertex0.Z, vertex2.X, vertex2.Y, vertex2.Z, edgeColor);
-            DrawLine(vertex1.X, vertex1.Y, vertex1.Z, vertex2.X, vertex2.Y, vertex2.Z, edgeColor);
+            DrawLine(vertex0, vertex1, edgeColor);
+            DrawLine(vertex0, vertex2, edgeColor);
+            DrawLine(vertex1, vertex2, edgeColor);
 
             float topY = vertex0.Y;
             float topZ = vertex0.Z;
@@ -197,7 +199,7 @@ namespace simple_3d_rendering
                 crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
                 crossZ1 = vertex0.Z + dz1 / dy1 * (topZ - vertex0.Z);
                 crossZ2 = vertex0.Z + dz2 / dy2 * (topZ - vertex0.Z);
-                DrawLine(crossX1, topY, crossZ1, crossX2, topY, crossZ2, surfaceColor);
+                DrawLine(new Vector4(crossX1, topY, crossZ1, 1.0f), new Vector4(crossX2, topY, crossZ2, 1.0f), surfaceColor);
                 topY++;
                 topZ += dz;
             }
@@ -214,7 +216,7 @@ namespace simple_3d_rendering
                 crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
                 crossZ1 = vertex1.Z + dz1 / dy1 * (topZ - vertex1.Z);
                 crossZ2 = vertex0.Z + dz2 / dy2 * (topZ - vertex0.Z);
-                DrawLine(crossX1, topY, crossZ1, crossX2, topY, crossZ2, surfaceColor);
+                DrawLine(new Vector4(crossX1, topY, crossZ1, 1.0f), new Vector4(crossX2, topY, crossZ2, 1.0f), surfaceColor);
                 topY++;
                 topZ += dz;
             }
@@ -267,11 +269,13 @@ namespace simple_3d_rendering
 
                     // Draw only visible rasterizated polygons
                     case DrawMode.Rasterization:
+
+                        // Check visibility of polygon
                         if (Vector3.Dot(polygon.Normal, -camera.Position) > 0)
                             if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
                             {
                                 Color polygonColor = GetPolygonColor(lightColor, surfaceColor, -camera.Position, polygon);
-                                DrawPolygon(vertexA.ViewPort, vertexB.ViewPort, vertexC.ViewPort, polygonColor, edgeColor);
+                                DrawPolygon(polygon, polygonColor, edgeColor);
                             }
                         break;
                 }

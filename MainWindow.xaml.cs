@@ -53,7 +53,7 @@ namespace Lab1
         private static Color backgroundColor = Colors.Black;
         private static Color backgroundColorInvert = Colors.White;
         private static Color surfaceColor = Colors.White;
-        private static Color lightColor = Colors.Aqua;
+        private static Color lightColor = Colors.White;
         private static Color rasterizedEdgeColor = Colors.Black;
         private static Color edgeColor = backgroundColorInvert;
 
