@@ -102,6 +102,7 @@ namespace Lab1
                             // Clear backround
                             renderEngine.FillRenderBuffer(backgroundColor);
                             model = parser.Parse(filename);
+                            model.MoveToWorldCenter();
                         }
                         catch (ParserException exception)
                         {

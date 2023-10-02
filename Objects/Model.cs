@@ -1,6 +1,7 @@
 ﻿using Lab1.Primitives;
 using simple_3d_rendering.Primitives;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace Lab1
@@ -174,6 +175,21 @@ namespace Lab1
         {
             ZPosition += moveStep;
             Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
+            UpdateTransformation();
+        }
+
+        public void MoveToWorldCenter()
+        {
+            float xMin = Vertices.Min(v => v.Original.X);
+            float xMax = Vertices.Max(v => v.Original.X);
+            float yMin = Vertices.Min(v => v.Original.Y);
+            float yMax = Vertices.Max(v => v.Original.Y);
+            float zMin = Vertices.Min(v => v.Original.Z);
+            float zMax = Vertices.Max(v => v.Original.Z);
+            XPosition = -(xMax + xMin) / 2;
+            YPosition = -(yMax + yMin) / 2;
+            ZPosition = -(zMax + zMin) / 2;
+            Move = Matrix4x4.CreateTranslation(new Vector3(XPosition, YPosition, ZPosition));
             UpdateTransformation();
         }
     }
