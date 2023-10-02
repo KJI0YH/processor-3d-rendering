@@ -1,4 +1,5 @@
 ﻿using Lab1.Primitives;
+using simple_3d_rendering.Primitives;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -6,9 +7,7 @@ namespace Lab1
 {
     public class Model
     {
-        public List<Vector4> Vertices { get; } = new List<Vector4>();
-        public List<Vector4> VerticesTextures { get; } = new List<Vector4>();
-        public List<Vector4> VerticesNormals { get; } = new List<Vector4>();
+        public List<Vertex> Vertices { get; } = new();
         public List<Polygon> Polygons { get; } = new List<Polygon>();
 
         private float xAxisRotate = 0;
@@ -96,24 +95,19 @@ namespace Lab1
             UpdateTransformation();
         }
 
-        public void AddVertex(Vector4 vertex)
+        public void AddVertex(Vertex vertex)
         {
             Vertices.Add(vertex);
-        }
-
-        public void AddVertexTexture(Vector4 vertexTexture)
-        {
-            VerticesTextures.Add(vertexTexture);
-        }
-
-        public void AddVertexNormal(Vector4 vectorNormal)
-        {
-            VerticesNormals.Add(vectorNormal);
         }
 
         public void AddPolygon(Polygon polygon)
         {
             Polygons.Add(polygon);
+        }
+
+        public void AddPolygon(IEnumerable<Polygon> polygons)
+        {
+            Polygons.AddRange(polygons);
         }
 
         private void UpdateTransformation()
