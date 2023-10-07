@@ -1,9 +1,9 @@
-﻿using Lab1.Primitives;
+﻿using Rendering.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Lab1.Rasterization
+namespace Rendering.Rasterization
 {
     public class DDALine : IRasterization
     {

@@ -1,10 +1,10 @@
-﻿using Lab1.Objects;
-using Lab1.Rasterization;
+﻿using Rendering.Objects;
+using Rendering.Rasterization;
 using System;
 using System.Numerics;
 using System.Text;
 
-namespace Lab1.Information
+namespace Rendering.Information
 {
     public class RenderInfo
     {
@@ -15,7 +15,7 @@ namespace Lab1.Information
         public string GetInfomation(Model model, Camera camera, IRasterization rasterization)
         {
             Vector3 cameraPosition = camera.SphericalPosition.ToCartesian();
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new();
             builder
                 .AppendLine($"Render time: {RenderTime} ms")
                 .AppendLine($"Vertex count: {model.Vertices.Count}")
@@ -46,7 +46,7 @@ namespace Lab1.Information
 
         public string GetHelp()
         {
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new();
             builder
                 .AppendLine("To close the application: Escape")
                 .AppendLine("To open a file: O")
@@ -67,8 +67,11 @@ namespace Lab1.Information
                 .AppendLine("To change far plane distance: B + Mouse Wheel")
                 .AppendLine("To change plane distance step: P + Mouse Wheel")
                 .AppendLine("To invert colors: C")
-                .AppendLine("To toggle line drawing: L")
+                .AppendLine("To set the camera to the initial position: Home")
                 .AppendLine("To change the rasterization algorithm: R")
+                .AppendLine("Vertex only drawing mode: 0")
+                .AppendLine("Wire drawing mode: 1")
+                .AppendLine("Rasterization drawing mode: 2")
                 .AppendLine("To toggle the render information: I")
                 .AppendLine("To toggle the help : F1");
             return builder.ToString();
@@ -76,7 +79,7 @@ namespace Lab1.Information
 
         public string GetParseError(string filename, string message)
         {
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new();
             builder
                 .AppendLine($"File {filename} cannot be parsed")
                 .AppendLine($"{message}");

@@ -1,15 +1,13 @@
-﻿using Lab1;
-using Lab1.Objects;
-using Lab1.Primitives;
-using Lab1.Rasterization;
-using simple_3d_rendering.Primitives;
+﻿using Rendering.Objects;
+using Rendering.Primitives;
+using Rendering.Rasterization;
 using System;
 using System.Numerics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace simple_3d_rendering
+namespace Rendering.Engine
 {
     public enum DrawMode
     {
@@ -119,14 +117,14 @@ namespace simple_3d_rendering
             unsafe
             {
                 // Get a pointer to the back buffer
-                IntPtr pBackBuffer = RenderBuffer.BackBuffer;
+                nint pBackBuffer = RenderBuffer.BackBuffer;
 
                 // Find the address of the pixel to draw
                 pBackBuffer += y * RenderBuffer.BackBufferStride;
                 pBackBuffer += x * 4;
 
                 // Assign the color data to the pixel
-                *((int*)pBackBuffer) = colorData;
+                *(int*)pBackBuffer = colorData;
             }
 
             // Specify the area of the bitmap that changed
@@ -147,9 +145,9 @@ namespace simple_3d_rendering
             float intensity = Math.Max(Vector3.Dot(Vector3.Normalize(lightPosition), Vector3.Normalize(polygon.Normal)), 0);
             Vector3 light = new(lightColor.R / 255, lightColor.G / 255, lightColor.B / 255);
             Vector3 surface = new(surfaceColor.R / 255, surfaceColor.G / 255, surfaceColor.B / 255);
-            color.R = (byte)(MathF.Round(intensity * light.X * surface.X * 255));
-            color.G = (byte)(MathF.Round(intensity * light.Y * surface.Y * 255));
-            color.B = (byte)(MathF.Round(intensity * light.Z * surface.Z * 255));
+            color.R = (byte)MathF.Round(intensity * light.X * surface.X * 255);
+            color.G = (byte)MathF.Round(intensity * light.Y * surface.Y * 255);
+            color.B = (byte)MathF.Round(intensity * light.Z * surface.Z * 255);
             return color;
         }
 
@@ -175,6 +173,10 @@ namespace simple_3d_rendering
                 (vertex1, vertex2) = (vertex2, vertex1);
             }
 
+            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
+            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+
             float crossX1, crossX2, crossZ1, crossZ2;
             float dx1 = vertex1.X - vertex0.X;
             float dy1 = vertex1.Y - vertex0.Y;
@@ -182,11 +184,6 @@ namespace simple_3d_rendering
             float dy2 = vertex2.Y - vertex0.Y;
             float dz1 = vertex1.Z - vertex0.Z;
             float dz2 = vertex2.Z - vertex0.Z;
-
-            // Draw edges of the triangle 
-            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
-            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
 
             float topY = vertex0.Y;
             float topZ = vertex0.Z;
@@ -219,6 +216,31 @@ namespace simple_3d_rendering
                 DrawLine(new Vector3(crossX1, topY, crossZ1), new Vector3(crossX2, topY, crossZ2), surfaceColor);
                 topY++;
                 topZ += dz;
+            }
+        }
+
+        // Polygon edge line drawing with pixel depth
+        public void DrawPolygonEdge(Vector3 start, Vector3 end, Color color)
+        {
+            int colorData = GetColorData(color);
+            try
+            {
+                // Reserve the back buffer for updates
+                RenderBuffer.Lock();
+
+                foreach (Pixel pixel in Rasterization.Rasterize(start, end))
+                {
+                    if (zBuffer[pixel.X, pixel.Y] >= pixel.Depth)
+                    {
+                        zBuffer[pixel.X, pixel.Y] = pixel.Depth;
+                        SetPixelData(pixel.X, pixel.Y, colorData);
+                    }
+                }
+            }
+            finally
+            {
+                // Release the back buffer and make it available for display
+                RenderBuffer.Unlock();
             }
         }
 
@@ -271,7 +293,8 @@ namespace simple_3d_rendering
                     case DrawMode.Rasterization:
 
                         // Check visibility of polygon
-                        if (Vector3.Dot(polygon.Normal, -camera.Position) > 0)
+                        Vector3 target = new(vertexA.Transform.X - camera.Position.X, vertexA.Transform.Y - camera.Position.Y, vertexA.Transform.Z - camera.Position.Z);
+                        if (Vector3.Dot(polygon.Normal, Vector3.Normalize(target)) > 0)
                             if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
                             {
                                 Color polygonColor = GetPolygonColor(lightColor, surfaceColor, -camera.Position, polygon);
@@ -284,7 +307,7 @@ namespace simple_3d_rendering
 
         private bool IsVertexVisible(Vector4 perspectiveVertex)
         {
-            return (perspectiveVertex.X >= -1 && perspectiveVertex.X <= 1 && perspectiveVertex.Y >= -1 && perspectiveVertex.Y <= 1 && perspectiveVertex.Z >= -1 && perspectiveVertex.Z <= 1);
+            return perspectiveVertex.X >= -1 && perspectiveVertex.X <= 1 && perspectiveVertex.Y >= -1 && perspectiveVertex.Y <= 1 && perspectiveVertex.Z >= -1 && perspectiveVertex.Z <= 1;
         }
 
         private void ResetZBuffer()

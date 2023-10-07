@@ -1,10 +1,9 @@
-﻿using Lab1.Primitives;
-using simple_3d_rendering.Primitives;
+﻿using Rendering.Primitives;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace Lab1
+namespace Rendering.Objects
 {
     public class Model
     {
@@ -191,6 +190,19 @@ namespace Lab1
             ZPosition = -(zMax + zMin) / 2;
             Move = Matrix4x4.CreateTranslation(new Vector3(XPosition, YPosition, ZPosition));
             UpdateTransformation();
+        }
+
+        public void SetInitialPositioin()
+        {
+            Scale = 1.0f;
+            XPosition = 0;
+            YPosition = 0;
+            ZPosition = 0;
+            XAxisRotate = 0;
+            YAxisRotate = 0;
+            ZAxisRotate = 0;
+            Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
+            MoveToWorldCenter();
         }
     }
 }

@@ -1,8 +1,8 @@
-﻿using Lab1.Primitives;
+﻿using Rendering.Primitives;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Lab1.Rasterization
+namespace Rendering.Rasterization
 {
     public interface IRasterization
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Lab1.Exceptions
+namespace Rendering.Exceptions
 {
     public class ParserException : Exception
     {

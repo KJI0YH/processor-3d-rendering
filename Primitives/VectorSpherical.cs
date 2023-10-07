@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Numerics;
 
-namespace Lab1.Primitives
+namespace Rendering.Primitives
 {
     public class VectorSpherical
     {

@@ -1,17 +1,17 @@
-﻿using Lab1.Exceptions;
-using Lab1.Information;
-using Lab1.Objects;
-using Lab1.Parser;
-using Lab1.Rasterization;
-using Microsoft.Win32;
-using simple_3d_rendering;
+﻿using Microsoft.Win32;
+using Rendering.Engine;
+using Rendering.Exceptions;
+using Rendering.Information;
+using Rendering.Objects;
+using Rendering.Parser;
+using Rendering.Rasterization;
 using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace Lab1
+namespace Rendering
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -38,6 +38,7 @@ namespace Lab1
         private const Key VERTEX_ONLY_DRAW_MODE_KEY = Key.D0;
         private const Key WIRE_DRAW_MODE_KEY = Key.D1;
         private const Key RASTERIZATION_DRAW_MODE_KEY = Key.D2;
+        private const Key CAMERA_RESET_KEY = Key.Home;
 
         private const float rotationDelta = MathF.PI / 36;
 
@@ -129,6 +130,13 @@ namespace Lab1
                     break;
                 case RASTERIZATION_CHANGE_KEY:
                     ChangeRasterization();
+                    break;
+                case CAMERA_RESET_KEY:
+                    if (model != null)
+                    {
+                        model.SetInitialPositioin();
+                        camera.SetInitialPosition(model);
+                    }
                     break;
                 case INFORMATION_TOGGLE_KEY:
                     ToggleVisibility(tbInfo);

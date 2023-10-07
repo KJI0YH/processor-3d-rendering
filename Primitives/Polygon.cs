@@ -1,12 +1,11 @@
-﻿using simple_3d_rendering.Exceptions;
-using simple_3d_rendering.Primitives;
+﻿using Rendering.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Windows.Media.Media3D;
 
-namespace Lab1.Primitives
+namespace Rendering.Primitives
 {
     public class Polygon
     {

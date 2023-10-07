@@ -1,12 +1,11 @@
-﻿using Lab1.Exceptions;
-using Lab1.Primitives;
-using simple_3d_rendering.Exceptions;
-using simple_3d_rendering.Primitives;
+﻿using Rendering.Exceptions;
+using Rendering.Objects;
+using Rendering.Primitives;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 
-namespace Lab1.Parser
+namespace Rendering.Parser
 {
     public class ObjParser : IModelParser
     {

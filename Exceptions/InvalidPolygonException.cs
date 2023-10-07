@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace simple_3d_rendering.Exceptions
+namespace Rendering.Exceptions
 {
     public class InvalidPolygonException : Exception
     {

@@ -1,4 +1,6 @@
-﻿namespace Lab1.Parser
+﻿using Rendering.Objects;
+
+namespace Rendering.Parser
 {
     public interface IModelParser
     {

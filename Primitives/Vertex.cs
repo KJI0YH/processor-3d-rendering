@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace simple_3d_rendering.Primitives
+namespace Rendering.Primitives
 {
     public class Vertex
     {

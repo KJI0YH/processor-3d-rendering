@@ -1,4 +1,4 @@
-﻿namespace Lab1.Primitives
+﻿namespace Rendering.Primitives
 {
     public class Pixel
     {

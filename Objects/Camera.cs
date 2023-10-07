@@ -1,9 +1,9 @@
-﻿using Lab1.Primitives;
+﻿using Rendering.Primitives;
 using System;
 using System.Linq;
 using System.Numerics;
 
-namespace Lab1.Objects
+namespace Rendering.Objects
 {
     public class Camera
     {
@@ -217,6 +217,8 @@ namespace Lab1.Objects
             Target = new Vector3(0, 0, 0);
             Up = new Vector3(0, 1, 0);
             zFar = 3 * distance;
+            zNear = 0.1f;
+            fov = MathF.PI / 3;
             UpdateViewMatrix();
             UpdateProjectionMatrix();
         }
