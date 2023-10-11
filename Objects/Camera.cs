@@ -214,6 +214,7 @@ namespace Rendering.Objects
             };
             float distance = radiuses.Max() + zMax - zMin;
             SphericalPosition = new VectorSpherical(distance, 0, MathF.PI / 2);
+            ZoomStep = distance * 0.05f;
             Target = new Vector3(0, 0, 0);
             Up = new Vector3(0, 1, 0);
             zFar = 3 * distance;
