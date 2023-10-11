@@ -59,7 +59,7 @@ namespace Rendering
         private static Color edgeColor = backgroundColorInvert;
 
         private int rasterizationMethodIndex = 0;
-        private readonly IRasterization[] rasterizationMethods = new IRasterization[]
+        private readonly IRasterisation[] rasterizationMethods = new IRasterisation[]
         {
             new Bresenham(),
             new DDALine(),
@@ -172,7 +172,7 @@ namespace Rendering
 
             // Show render information
             renderInfo.RenderTime = stop - start;
-            tbInfo.Text = renderInfo.GetInfomation(model, camera, renderEngine.Rasterization);
+            tbInfo.Text = renderInfo.GetInfomation(model, camera, renderEngine.Rasterisation);
             tbHelp.Text = renderInfo.GetHelp();
         }
 
@@ -256,7 +256,7 @@ namespace Rendering
 
         private void ChangeRasterization()
         {
-            renderEngine.Rasterization = rasterizationMethods[++rasterizationMethodIndex % rasterizationMethods.Length];
+            renderEngine.Rasterisation = rasterizationMethods[++rasterizationMethodIndex % rasterizationMethods.Length];
         }
 
         private void ToggleVisibility(TextBlock textBlock)

@@ -5,83 +5,102 @@ using System.Numerics;
 
 namespace Rendering.Rasterization
 {
-    public class Bresenham : IRasterization
+    public class Bresenham : IRasterisation
     {
-        public IEnumerable<Pixel> Rasterize(float x1, float y1, float x2, float y2)
+        public IEnumerable<Pixel> Rasterise(Vector2 start, Vector2 end)
         {
-            bool reverce = false;
-            if (Math.Abs(x2 - x1) < Math.Abs(y2 - y1))
+            int x1 = (int)Math.Floor(start.X);
+            int y1 = (int)Math.Floor(start.Y);
+            int x2 = (int)Math.Floor(end.X);
+            int y2 = (int)Math.Floor(end.Y);
+
+            int dx = x2 - x1;
+            int dy = y2 - y1;
+
+            int width = Math.Abs(dx);
+            int height = Math.Abs(dy);
+
+            // Rotation matrix
+            int m11 = Math.Sign(dx);
+            int m12 = 0;
+            int m21 = 0;
+            int m22 = Math.Sign(dy);
+
+            if (width < height)
             {
-                (x1, y1) = (y1, x1);
-                (x2, y2) = (y2, x2);
-                reverce = true;
+                (m11, m12) = (m12, m11);
+                (m21, m22) = (m22, m21);
             }
 
-            int x = (int)MathF.Round(x1);
-            int y = (int)MathF.Round(y1);
-            int xEnd = (int)MathF.Round(x2);
-            int xDelta = (int)Math.Abs(x2 - x1);
-            int yDelta = (int)Math.Abs(y2 - y1);
-            int xChange = x2 - x1 > 0 ? 1 : -1;
-            int yChange = y2 - y1 > 0 ? 1 : -1;
+            int stepCount = Math.Max(width, height);
+            int y = 0;
             int error = 0;
+            int dError = 2 * int.Min(width, height);
 
-            do
+            for (int x = 0; x <= stepCount; x++)
             {
-                if (reverce) yield return new Pixel(y, x);
-                else yield return new Pixel(x, y);
-
-                x += xChange;
-                error += yDelta;
-                if (2 * error > xDelta)
+                int xPixel = x1 + m11 * x + m12 * y;
+                int yPixel = y1 + m21 * x + m22 * y;
+                yield return new Pixel(xPixel, yPixel);
+                if ((error += dError) > stepCount)
                 {
-                    y += yChange;
-                    error -= xDelta;
+                    error -= 2 * stepCount;
+                    y++;
                 }
-            } while (x * xChange < xEnd * xChange);
+            }
         }
 
-        public IEnumerable<Pixel> Rasterize(Vector3 start, Vector3 end)
+        public IEnumerable<Pixel> Rasterise(Vector3 start, Vector3 end)
         {
-            bool reverce = false;
-            if (Math.Abs(end.X - start.X) < Math.Abs(end.Y - start.Y))
+            int x1 = (int)Math.Floor(start.X);
+            int y1 = (int)Math.Floor(start.Y);
+            int x2 = (int)Math.Floor(end.X);
+            int y2 = (int)Math.Floor(end.Y);
+            float z1 = start.Z;
+            float z2 = end.Z;
+
+            int dx = x2 - x1;
+            int dy = y2 - y1;
+            float dz = z2 - z1;
+
+            int width = Math.Abs(dx);
+            int height = Math.Abs(dy);
+
+            // Rotation matrix
+            int m11 = Math.Sign(dx);
+            int m12 = 0;
+            int m21 = 0;
+            int m22 = Math.Sign(dy);
+
+            if (width < height)
             {
-                (start.X, start.Y) = (start.Y, start.X);
-                (end.X, end.Y) = (end.Y, end.X);
-                reverce = true;
+                (m11, m12) = (m12, m11);
+                (m21, m22) = (m22, m21);
             }
 
-            int x = (int)MathF.Round(start.X);
-            int y = (int)MathF.Round(start.Y);
-            float z = start.Z;
-            int xEnd = (int)MathF.Round(end.X);
-            int xDelta = (int)Math.Abs(end.X - start.X);
-            int yDelta = (int)Math.Abs(end.Y - start.Y);
-            float dxz = (end.Z - start.Z) / (end.X - start.X);
-            float dyz = (end.Z - start.Z) / (end.Y - start.Y);
-            int xChange = end.X - start.X > 0 ? 1 : -1;
-            int yChange = end.Y - start.Y > 0 ? 1 : -1;
+            int stepCount = Math.Max(width, height);
+            int y = 0;
             int error = 0;
+            int dError = 2 * int.Min(width, height);
 
-            do
+            float dxz = dz / (end.X - start.X);
+            float dyz = dz / (end.Y - start.Y);
+            float zPixel = z1;
+
+            for (int x = 0; x <= stepCount; x++)
             {
-                if (reverce) yield return new Pixel(y, x, z);
-                else yield return new Pixel(x, y, z);
+                int xPixel = x1 + m11 * x + m12 * y;
+                int yPixel = y1 + m21 * x + m22 * y;
+                yield return new Pixel(xPixel, yPixel, zPixel);
+                zPixel += dxz;
 
-                x += xChange;
-
-                if (reverce) z += dyz;
-                else z += dxz;
-                error += yDelta;
-                if (2 * error > xDelta)
+                if ((error += dError) > stepCount)
                 {
-                    y += yChange;
-
-                    if (reverce) z += dxz;
-                    else z += dyz;
-                    error -= xDelta;
+                    error -= 2 * stepCount;
+                    y++;
+                    zPixel += dyz;
                 }
-            } while (x * xChange < xEnd * xChange);
+            }
         }
     }
 }

@@ -24,8 +24,9 @@ namespace Rendering.Engine
         private readonly int _height;
         private readonly int _bytesPerPixel;
         private readonly int _stride;
+        private readonly byte[] _pixelData;
 
-        public IRasterization Rasterization = new Bresenham();
+        public IRasterisation Rasterisation = new Bresenham();
 
         public RenderEngine(int pixelWidth, int pixelHeight)
         {
@@ -35,24 +36,23 @@ namespace Rendering.Engine
             zBuffer = new double?[_width, _height];
             _bytesPerPixel = (RenderBuffer.Format.BitsPerPixel + 7) / 8;
             _stride = _width * _bytesPerPixel;
+            _pixelData = new byte[_width * _height * _bytesPerPixel];
         }
 
         public void FillRenderBuffer(Color fillColor)
         {
-            byte[] pixelData = new byte[_width * _height * _bytesPerPixel];
-
-            for (int i = 0; i < pixelData.Length; i += _bytesPerPixel)
+            for (int i = 0; i < _pixelData.Length; i += _bytesPerPixel)
             {
-                pixelData[i + 2] = fillColor.R;
-                pixelData[i + 1] = fillColor.G;
-                pixelData[i + 0] = fillColor.B;
-                pixelData[i + 3] = 0;
+                _pixelData[i + 2] = fillColor.R;
+                _pixelData[i + 1] = fillColor.G;
+                _pixelData[i + 0] = fillColor.B;
+                _pixelData[i + 3] = 0;
             }
-            RenderBuffer.WritePixels(new Int32Rect(0, 0, _width, _height), pixelData, _stride, 0);
+            RenderBuffer.WritePixels(new Int32Rect(0, 0, _width, _height), _pixelData, _stride, 0);
         }
 
         // Line drawing without pixel depth
-        public void DrawLine(float xStart, float yStart, float xEnd, float yEnd, Color color)
+        public void DrawLine(Vector2 start, Vector2 end, Color color)
         {
             int colorData = GetColorData(color);
             try
@@ -60,7 +60,7 @@ namespace Rendering.Engine
                 // Reserve the back buffer for updates
                 RenderBuffer.Lock();
 
-                foreach (Pixel pixel in Rasterization.Rasterize(xStart, yStart, xEnd, yEnd))
+                foreach (Pixel pixel in Rasterisation.Rasterise(start, end))
                 {
                     SetPixelData(pixel.X, pixel.Y, colorData);
                 }
@@ -81,7 +81,7 @@ namespace Rendering.Engine
                 // Reserve the back buffer for updates
                 RenderBuffer.Lock();
 
-                foreach (Pixel pixel in Rasterization.Rasterize(start, end))
+                foreach (Pixel pixel in Rasterisation.Rasterise(start, end))
                 {
                     if (zBuffer[pixel.X, pixel.Y] > pixel.Depth)
                     {
@@ -173,6 +173,7 @@ namespace Rendering.Engine
                 (vertex1, vertex2) = (vertex2, vertex1);
             }
 
+            // Draw polygon shape
             DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
             DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
             DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
@@ -185,20 +186,20 @@ namespace Rendering.Engine
             float dz1 = vertex1.Z - vertex0.Z;
             float dz2 = vertex2.Z - vertex0.Z;
 
-            float topY = vertex0.Y;
-            float topZ = vertex0.Z;
+            float currentY = vertex0.Y;
+            float currentZ = vertex0.Z;
             float dz = dy1 == 0 ? 0 : dz1 / dy1;
 
             // Draw first part of triangle
-            while (topY < vertex1.Y)
+            while (currentY < vertex1.Y)
             {
-                crossX1 = vertex0.X + dx1 / dy1 * (topY - vertex0.Y);
-                crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
-                crossZ1 = vertex0.Z + dz1 / dy1 * (topZ - vertex0.Z);
-                crossZ2 = vertex0.Z + dz2 / dy2 * (topZ - vertex0.Z);
-                DrawLine(new Vector3(crossX1, topY, crossZ1), new Vector3(crossX2, topY, crossZ2), surfaceColor);
-                topY++;
-                topZ += dz;
+                crossX1 = vertex0.X + dx1 / dy1 * (currentY - vertex0.Y);
+                crossX2 = vertex0.X + dx2 / dy2 * (currentY - vertex0.Y);
+                crossZ1 = vertex0.Z + dz1 / dy1 * (currentZ - vertex0.Z);
+                crossZ2 = vertex0.Z + dz2 / dy2 * (currentZ - vertex0.Z);
+                DrawLine(new Vector3(crossX1, currentY, crossZ1), new Vector3(crossX2, currentY, crossZ2), surfaceColor);
+                currentY++;
+                currentZ += dz;
             }
 
             dx1 = vertex2.X - vertex1.X;
@@ -207,15 +208,15 @@ namespace Rendering.Engine
             dz = dy1 == 0 ? 0 : dz1 / dy1;
 
             // Draw second part of triangle
-            while (topY < vertex2.Y)
+            while (currentY < vertex2.Y)
             {
-                crossX1 = vertex1.X + dx1 / dy1 * (topY - vertex1.Y);
-                crossX2 = vertex0.X + dx2 / dy2 * (topY - vertex0.Y);
-                crossZ1 = vertex1.Z + dz1 / dy1 * (topZ - vertex1.Z);
-                crossZ2 = vertex0.Z + dz2 / dy2 * (topZ - vertex0.Z);
-                DrawLine(new Vector3(crossX1, topY, crossZ1), new Vector3(crossX2, topY, crossZ2), surfaceColor);
-                topY++;
-                topZ += dz;
+                crossX1 = vertex1.X + dx1 / dy1 * (currentY - vertex1.Y);
+                crossX2 = vertex0.X + dx2 / dy2 * (currentY - vertex0.Y);
+                crossZ1 = vertex1.Z + dz1 / dy1 * (currentZ - vertex1.Z);
+                crossZ2 = vertex0.Z + dz2 / dy2 * (currentZ - vertex0.Z);
+                DrawLine(new Vector3(crossX1, currentY, crossZ1), new Vector3(crossX2, currentY, crossZ2), surfaceColor);
+                currentY++;
+                currentZ += dz;
             }
         }
 
@@ -228,7 +229,7 @@ namespace Rendering.Engine
                 // Reserve the back buffer for updates
                 RenderBuffer.Lock();
 
-                foreach (Pixel pixel in Rasterization.Rasterize(start, end))
+                foreach (Pixel pixel in Rasterisation.Rasterise(start, end))
                 {
                     if (zBuffer[pixel.X, pixel.Y] >= pixel.Depth)
                     {
@@ -282,11 +283,11 @@ namespace Rendering.Engine
                     // Draw only visible lines
                     case DrawMode.Wire:
                         if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective))
-                            DrawLine(vertexA.ViewPort.X, vertexA.ViewPort.Y, vertexB.ViewPort.X, vertexB.ViewPort.Y, edgeColor);
+                            DrawLine(new Vector2(vertexA.ViewPort.X, vertexA.ViewPort.Y), new Vector2(vertexB.ViewPort.X, vertexB.ViewPort.Y), edgeColor);
                         if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexC.Perspective))
-                            DrawLine(vertexA.ViewPort.X, vertexA.ViewPort.Y, vertexC.ViewPort.X, vertexC.ViewPort.Y, edgeColor);
+                            DrawLine(new Vector2(vertexA.ViewPort.X, vertexA.ViewPort.Y), new Vector2(vertexC.ViewPort.X, vertexC.ViewPort.Y), edgeColor);
                         if (IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
-                            DrawLine(vertexB.ViewPort.X, vertexB.ViewPort.Y, vertexC.ViewPort.X, vertexC.ViewPort.Y, edgeColor);
+                            DrawLine(new Vector2(vertexB.ViewPort.X, vertexB.ViewPort.Y), new Vector2(vertexC.ViewPort.X, vertexC.ViewPort.Y), edgeColor);
                         break;
 
                     // Draw only visible rasterizated polygons

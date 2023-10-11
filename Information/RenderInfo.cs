@@ -12,7 +12,7 @@ namespace Rendering.Information
 
         public RenderInfo() { }
 
-        public string GetInfomation(Model model, Camera camera, IRasterization rasterization)
+        public string GetInfomation(Model model, Camera camera, IRasterisation rasterisation)
         {
             Vector3 cameraPosition = camera.SphericalPosition.ToCartesian();
             StringBuilder builder = new();
@@ -37,7 +37,7 @@ namespace Rendering.Information
                 .AppendLine($"Near plane distance: {camera.ZNear}")
                 .AppendLine($"Far plane distance: {camera.ZFar}")
                 .AppendLine($"Plane distance step: {camera.PlaneDistanceStep}")
-                .AppendLine($"Rasterization: {rasterization.GetType().Name}")
+                .AppendLine($"Rasterization: {rasterisation.GetType().Name}")
                 .AppendLine($"Screen width: {camera.ScreenWidth}")
                 .AppendLine($"Screen height: {camera.ScreenHeight}")
                 .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight:F5}");
