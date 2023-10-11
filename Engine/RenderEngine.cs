@@ -1,6 +1,6 @@
 ﻿using Rendering.Objects;
 using Rendering.Primitives;
-using Rendering.Rasterization;
+using Rendering.Rasterisation;
 using System;
 using System.Numerics;
 using System.Windows;
@@ -13,13 +13,13 @@ namespace Rendering.Engine
     {
         VertexOnly,
         Wire,
-        Rasterization
+        Rasterisation
     }
 
     public class RenderEngine
     {
         public readonly WriteableBitmap RenderBuffer;
-        private readonly double?[,] zBuffer;
+        private readonly float[,] zBuffer;
         private readonly int _width;
         private readonly int _height;
         private readonly int _bytesPerPixel;
@@ -33,7 +33,7 @@ namespace Rendering.Engine
             _width = pixelWidth;
             _height = pixelHeight;
             RenderBuffer = new WriteableBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgr32, null);
-            zBuffer = new double?[_width, _height];
+            zBuffer = new float[_width, _height];
             _bytesPerPixel = (RenderBuffer.Format.BitsPerPixel + 7) / 8;
             _stride = _width * _bytesPerPixel;
             _pixelData = new byte[_width * _height * _bytesPerPixel];
@@ -174,9 +174,9 @@ namespace Rendering.Engine
             }
 
             // Draw polygon shape
-            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
-            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            // DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
+            // DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            // DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
 
             float crossX1, crossX2, crossZ1, crossZ2;
             float dx1 = vertex1.X - vertex0.X;
@@ -218,31 +218,23 @@ namespace Rendering.Engine
                 currentY++;
                 currentZ += dz;
             }
+
+            // DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            // DrawPolygonEdge(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            // DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
         }
 
         // Polygon edge line drawing with pixel depth
         public void DrawPolygonEdge(Vector3 start, Vector3 end, Color color)
         {
-            int colorData = GetColorData(color);
-            try
-            {
-                // Reserve the back buffer for updates
-                RenderBuffer.Lock();
+            int xStart = (int)MathF.Round(start.X);
+            int yStart = (int)MathF.Round(start.Y);
+            int xEnd = (int)MathF.Round(end.X);
+            int yEnd = (int)MathF.Round(end.Y);
 
-                foreach (Pixel pixel in Rasterisation.Rasterise(start, end))
-                {
-                    if (zBuffer[pixel.X, pixel.Y] >= pixel.Depth)
-                    {
-                        zBuffer[pixel.X, pixel.Y] = pixel.Depth;
-                        SetPixelData(pixel.X, pixel.Y, colorData);
-                    }
-                }
-            }
-            finally
-            {
-                // Release the back buffer and make it available for display
-                RenderBuffer.Unlock();
-            }
+            if (zBuffer[xStart, yStart] < start.Z || zBuffer[xEnd, yEnd] < end.Z) return;
+
+            DrawLine(new Vector2(start.X, start.Y), new Vector2(end.X, end.Y), color);
         }
 
         public void DrawModel(Model model, Camera camera, Color backColor, Color surfaceColor, Color edgeColor, Color lightColor, DrawMode drawMode)
@@ -291,7 +283,7 @@ namespace Rendering.Engine
                         break;
 
                     // Draw only visible rasterizated polygons
-                    case DrawMode.Rasterization:
+                    case DrawMode.Rasterisation:
 
                         // Check visibility of polygon
                         Vector3 target = new(vertexA.Transform.X - camera.Position.X, vertexA.Transform.Y - camera.Position.Y, vertexA.Transform.Z - camera.Position.Z);
@@ -317,7 +309,7 @@ namespace Rendering.Engine
             {
                 for (int j = 0; j < zBuffer.GetLength(1); j++)
                 {
-                    zBuffer[i, j] = 1.0;
+                    zBuffer[i, j] = 1.0f;
                 }
             }
         }

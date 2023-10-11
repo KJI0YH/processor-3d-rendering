@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Rendering.Rasterization
+namespace Rendering.Rasterisation
 {
     public class Bresenham : IRasterisation
     {
@@ -83,9 +83,10 @@ namespace Rendering.Rasterization
             int error = 0;
             int dError = 2 * int.Min(width, height);
 
-            float dxz = dz / (end.X - start.X);
-            float dyz = dz / (end.Y - start.Y);
+            float dxz = dz / dx;
+            float dyz = dz / dy;
             float zPixel = z1;
+            float zTop = z1;
 
             for (int x = 0; x <= stepCount; x++)
             {
@@ -98,7 +99,7 @@ namespace Rendering.Rasterization
                 {
                     error -= 2 * stepCount;
                     y++;
-                    zPixel += dyz;
+                    zPixel = zTop += dyz;
                 }
             }
         }

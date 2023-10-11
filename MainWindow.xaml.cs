@@ -4,7 +4,7 @@ using Rendering.Exceptions;
 using Rendering.Information;
 using Rendering.Objects;
 using Rendering.Parser;
-using Rendering.Rasterization;
+using Rendering.Rasterisation;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,7 +25,7 @@ namespace Rendering
         private const Key Y_CONTROL_KEY = Key.Y;
         private const Key Z_CONTROL_KEY = Key.Z;
         private const Key FOV_CHANGE_KEY = Key.F;
-        private const Key RASTERIZATION_CHANGE_KEY = Key.R;
+        private const Key RASTERISATION_CHANGE_KEY = Key.R;
         private const Key INFORMATION_TOGGLE_KEY = Key.I;
         private const Key HELP_TOGGLE_KEY = Key.F1;
         private const Key SCALE_KEY = Key.S;
@@ -37,7 +37,7 @@ namespace Rendering
         private const Key PLANE_DISTANCE_STEP_KEY = Key.P;
         private const Key VERTEX_ONLY_DRAW_MODE_KEY = Key.D0;
         private const Key WIRE_DRAW_MODE_KEY = Key.D1;
-        private const Key RASTERIZATION_DRAW_MODE_KEY = Key.D2;
+        private const Key RASTERISATION_DRAW_MODE_KEY = Key.D2;
         private const Key CAMERA_RESET_KEY = Key.Home;
 
         private const float rotationDelta = MathF.PI / 36;
@@ -58,8 +58,8 @@ namespace Rendering
         private static Color rasterizedEdgeColor = Colors.Black;
         private static Color edgeColor = backgroundColorInvert;
 
-        private int rasterizationMethodIndex = 0;
-        private readonly IRasterisation[] rasterizationMethods = new IRasterisation[]
+        private int rasterisationMethodIndex = 0;
+        private readonly IRasterisation[] rasterisationMethods = new IRasterisation[]
         {
             new Bresenham(),
             new DDALine(),
@@ -121,15 +121,15 @@ namespace Rendering
                     drawMode = DrawMode.Wire;
                     edgeColor = backgroundColorInvert;
                     break;
-                case RASTERIZATION_DRAW_MODE_KEY:
-                    drawMode = DrawMode.Rasterization;
+                case RASTERISATION_DRAW_MODE_KEY:
+                    drawMode = DrawMode.Rasterisation;
                     edgeColor = rasterizedEdgeColor;
                     break;
                 case INVERT_COLORS_KEY:
                     InvertColors();
                     break;
-                case RASTERIZATION_CHANGE_KEY:
-                    ChangeRasterization();
+                case RASTERISATION_CHANGE_KEY:
+                    ChangeRasterisation();
                     break;
                 case CAMERA_RESET_KEY:
                     if (model != null)
@@ -244,7 +244,7 @@ namespace Rendering
         {
             (backgroundColor, backgroundColorInvert) = (backgroundColorInvert, backgroundColor);
 
-            if (drawMode != DrawMode.Rasterization)
+            if (drawMode != DrawMode.Rasterisation)
             {
                 edgeColor = backgroundColorInvert;
             }
@@ -254,9 +254,9 @@ namespace Rendering
             tbHelp.Foreground = textBrush;
         }
 
-        private void ChangeRasterization()
+        private void ChangeRasterisation()
         {
-            renderEngine.Rasterisation = rasterizationMethods[++rasterizationMethodIndex % rasterizationMethods.Length];
+            renderEngine.Rasterisation = rasterisationMethods[++rasterisationMethodIndex % rasterisationMethods.Length];
         }
 
         private void ToggleVisibility(TextBlock textBlock)

@@ -15,11 +15,11 @@ namespace Rendering.Parser
             var fileStream = new FileStream(filename, FileMode.Open, FileAccess.Read); ;
             using (var streamReader = new StreamReader(fileStream))
             {
-                string line = string.Empty;
+                string? line = string.Empty;
                 int lineCount = 0, vertexCount = 0;
                 try
                 {
-                    while ((line = streamReader.ReadLine()) != null)
+                    while ((line = streamReader?.ReadLine()) != null)
                     {
                         lineCount++;
                         string[] tokens = line.Trim().Replace('.', ',').Split(' ');

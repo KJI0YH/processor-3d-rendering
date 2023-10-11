@@ -1,5 +1,5 @@
 ﻿using Rendering.Objects;
-using Rendering.Rasterization;
+using Rendering.Rasterisation;
 using System;
 using System.Numerics;
 using System.Text;
@@ -37,7 +37,7 @@ namespace Rendering.Information
                 .AppendLine($"Near plane distance: {camera.ZNear}")
                 .AppendLine($"Far plane distance: {camera.ZFar}")
                 .AppendLine($"Plane distance step: {camera.PlaneDistanceStep}")
-                .AppendLine($"Rasterization: {rasterisation.GetType().Name}")
+                .AppendLine($"Rasterisation: {rasterisation.GetType().Name}")
                 .AppendLine($"Screen width: {camera.ScreenWidth}")
                 .AppendLine($"Screen height: {camera.ScreenHeight}")
                 .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight:F5}");
@@ -68,10 +68,10 @@ namespace Rendering.Information
                 .AppendLine("To change plane distance step: P + Mouse Wheel")
                 .AppendLine("To invert colors: C")
                 .AppendLine("To set the camera to the initial position: Home")
-                .AppendLine("To change the rasterization algorithm: R")
+                .AppendLine("To change the rasterisation algorithm: R")
                 .AppendLine("Vertex only drawing mode: 0")
                 .AppendLine("Wire drawing mode: 1")
-                .AppendLine("Rasterization drawing mode: 2")
+                .AppendLine("Rasterisation drawing mode: 2")
                 .AppendLine("To toggle the render information: I")
                 .AppendLine("To toggle the help : F1");
             return builder.ToString();

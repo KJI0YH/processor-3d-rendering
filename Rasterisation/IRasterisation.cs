@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Rendering.Rasterization
+namespace Rendering.Rasterisation
 {
     public interface IRasterisation
     {
