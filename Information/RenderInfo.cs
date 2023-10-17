@@ -50,7 +50,7 @@ namespace Rendering.Information
             builder
                 .AppendLine("To close the application: Escape")
                 .AppendLine("To open a file: O")
-                .AppendLine("For model rotation: Mouse Drag")
+                .AppendLine("For model rotation: Mouse Drag or Key Arrows")
                 .AppendLine("To zoom in|out of the camera: Mouse Wheel")
                 .AppendLine("To change the zoom step of the camera: Left Ctrl + MouseWheel")
                 .AppendLine("For rotation around the X axis: X + Mouse Wheel")

@@ -39,8 +39,13 @@ namespace Rendering
         private const Key WIRE_DRAW_MODE_KEY = Key.D1;
         private const Key RASTERISATION_DRAW_MODE_KEY = Key.D2;
         private const Key CAMERA_RESET_KEY = Key.Home;
+        private const Key MOVE_UP_KEY = Key.Up;
+        private const Key MOVE_RIGHT_KEY = Key.Right;
+        private const Key MOVE_DOWN_KEY = Key.Down;
+        private const Key MOVE_LEFT_KEY = Key.Left;
 
-        private const float rotationDelta = MathF.PI / 36;
+        private const float mouseRotationDelta = MathF.PI / 36;
+        private const float keyRotationDelta = 10;
 
         private readonly OpenFileDialog openFileDialog;
         private readonly ObjParser parser = new();
@@ -145,6 +150,18 @@ namespace Rendering
                     ToggleVisibility(tbHelp);
                     tbHelp.Text = renderInfo.GetHelp();
                     break;
+                case MOVE_UP_KEY:
+                    camera.MoveZenith(-keyRotationDelta);
+                    break;
+                case MOVE_RIGHT_KEY:
+                    camera.MoveAzimuth(keyRotationDelta);
+                    break;
+                case MOVE_DOWN_KEY:
+                    camera.MoveZenith(keyRotationDelta);
+                    break;
+                case MOVE_LEFT_KEY:
+                    camera.MoveAzimuth(-keyRotationDelta);
+                    break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
                     break;
@@ -206,9 +223,9 @@ namespace Rendering
                 if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByX(-model.MoveStep);
                 else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByY(-model.MoveStep);
                 else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByZ(-model.MoveStep);
-                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate -= rotationDelta;
-                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate -= rotationDelta;
-                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate -= rotationDelta;
+                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate -= mouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate -= mouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate -= mouseRotationDelta;
                 else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= camera.FovStep;
                 else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.DecreaseScaleStep();
                 else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale -= model.ScaleStep;
@@ -224,9 +241,9 @@ namespace Rendering
                 if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByX(model.MoveStep);
                 else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByY(model.MoveStep);
                 else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByZ(model.MoveStep);
-                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate += rotationDelta;
-                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate += rotationDelta;
-                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate += rotationDelta;
+                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate += mouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate += mouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate += mouseRotationDelta;
                 else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += camera.FovStep;
                 else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.IncreaseScaleStep();
                 else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale += model.ScaleStep;
