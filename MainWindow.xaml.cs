@@ -44,27 +44,24 @@ namespace Rendering
         private const Key MOVE_DOWN_KEY = Key.Down;
         private const Key MOVE_LEFT_KEY = Key.Left;
 
-        private const float mouseRotationDelta = MathF.PI / 36;
-        private const float keyRotationDelta = 10;
+        private readonly OpenFileDialog _openFileDialog;
+        private readonly ObjParser _parser = new();
+        private Model? _model = null;
+        private readonly Camera _camera = new();
+        private RenderEngine _renderEngine;
+        private DrawMode _drawMode = DrawMode.Wire;
+        private readonly RenderInfo _renderInfo = new();
 
-        private readonly OpenFileDialog openFileDialog;
-        private readonly ObjParser parser = new();
-        private Model? model = null;
-        private readonly Camera camera = new();
-        private RenderEngine renderEngine;
-        private DrawMode drawMode = DrawMode.Wire;
-        private readonly RenderInfo renderInfo = new();
+        private Point _mouseClickPosition;
+        private static Color _backgroundColor = Colors.Black;
+        private static Color _backgroundColorInvert = Colors.White;
+        private static Color _surfaceColor = Colors.White;
+        private static Color _lightColor = Colors.White;
+        private static Color _rasterizedEdgeColor = Colors.Black;
+        private static Color _edgeColor = _backgroundColorInvert;
 
-        private Point mouseClickPosition;
-        private static Color backgroundColor = Colors.Black;
-        private static Color backgroundColorInvert = Colors.White;
-        private static Color surfaceColor = Colors.White;
-        private static Color lightColor = Colors.White;
-        private static Color rasterizedEdgeColor = Colors.Black;
-        private static Color edgeColor = backgroundColorInvert;
-
-        private int rasterisationMethodIndex = 0;
-        private readonly IRasterisation[] rasterisationMethods = new IRasterisation[]
+        private int _rasterisationMethodIndex = 0;
+        private readonly IRasterisation[] _rasterisationMethods = new IRasterisation[]
         {
             new Bresenham(),
             new DDALine(),
@@ -73,13 +70,13 @@ namespace Rendering
         public MainWindow()
         {
             InitializeComponent();
-            openFileDialog = new()
+            _openFileDialog = new()
             {
                 Filter = "Wavefront files (.obj)|*.obj"
             };
-            tbInfo.Foreground = new SolidColorBrush(surfaceColor);
-            tbHelp.Foreground = new SolidColorBrush(surfaceColor);
-            tbHelp.Text = renderInfo.GetHelp();
+            tbInfo.Foreground = new SolidColorBrush(_surfaceColor);
+            tbHelp.Foreground = new SolidColorBrush(_surfaceColor);
+            tbHelp.Text = _renderInfo.GetHelp();
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
@@ -89,8 +86,8 @@ namespace Rendering
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            camera.ScreenWidth = (float)ActualWidth;
-            camera.ScreenHeight = (float)ActualHeight;
+            _camera.ScreenWidth = (float)ActualWidth;
+            _camera.ScreenHeight = (float)ActualHeight;
             InitializeRenderBuffer();
         }
 
@@ -99,36 +96,36 @@ namespace Rendering
             switch (e.Key)
             {
                 case OPEN_FILE_KEY:
-                    if (openFileDialog.ShowDialog() == true)
+                    if (_openFileDialog.ShowDialog() == true)
                     {
-                        model = null;
-                        string filename = openFileDialog.FileName;
+                        _model = null;
+                        string filename = _openFileDialog.FileName;
                         try
                         {
                             // Clear backround
-                            renderEngine.FillRenderBuffer(backgroundColor);
-                            model = parser.Parse(filename);
-                            model.MoveToWorldCenter();
-                            camera.SetInitialPosition(model);
+                            _renderEngine.FillRenderBuffer(_backgroundColor);
+                            _model = _parser.Parse(filename);
+                            _model.MoveToWorldCenter();
+                            _camera.SetInitialPosition(_model);
                         }
                         catch (ParserException exception)
                         {
                             // Show error message
                             tbInfo.Visibility = Visibility.Visible;
-                            tbInfo.Text = renderInfo.GetParseError(filename, exception.Message);
+                            tbInfo.Text = _renderInfo.GetParseError(filename, exception.Message);
                         }
                     }
                     break;
                 case VERTEX_ONLY_DRAW_MODE_KEY:
-                    drawMode = DrawMode.VertexOnly;
+                    _drawMode = DrawMode.VertexOnly;
                     break;
                 case WIRE_DRAW_MODE_KEY:
-                    drawMode = DrawMode.Wire;
-                    edgeColor = backgroundColorInvert;
+                    _drawMode = DrawMode.Wire;
+                    _edgeColor = _backgroundColorInvert;
                     break;
                 case RASTERISATION_DRAW_MODE_KEY:
-                    drawMode = DrawMode.Rasterisation;
-                    edgeColor = rasterizedEdgeColor;
+                    _drawMode = DrawMode.Rasterisation;
+                    _edgeColor = _rasterizedEdgeColor;
                     break;
                 case INVERT_COLORS_KEY:
                     InvertColors();
@@ -137,10 +134,10 @@ namespace Rendering
                     ChangeRasterisation();
                     break;
                 case CAMERA_RESET_KEY:
-                    if (model != null)
+                    if (_model != null)
                     {
-                        model.SetInitialPositioin();
-                        camera.SetInitialPosition(model);
+                        _model.SetInitialPositioin();
+                        _camera.SetInitialPosition(_model);
                     }
                     break;
                 case INFORMATION_TOGGLE_KEY:
@@ -148,19 +145,19 @@ namespace Rendering
                     break;
                 case HELP_TOGGLE_KEY:
                     ToggleVisibility(tbHelp);
-                    tbHelp.Text = renderInfo.GetHelp();
+                    tbHelp.Text = _renderInfo.GetHelp();
                     break;
                 case MOVE_UP_KEY:
-                    camera.MoveZenith(-keyRotationDelta);
+                    _camera.ZenithAngle -= _camera.KeyRotation;
                     break;
                 case MOVE_RIGHT_KEY:
-                    camera.MoveAzimuth(keyRotationDelta);
+                    _camera.AzimuthAngle += _camera.KeyRotation;
                     break;
                 case MOVE_DOWN_KEY:
-                    camera.MoveZenith(keyRotationDelta);
+                    _camera.ZenithAngle += _camera.KeyRotation;
                     break;
                 case MOVE_LEFT_KEY:
-                    camera.MoveAzimuth(-keyRotationDelta);
+                    _camera.AzimuthAngle -= _camera.KeyRotation;
                     break;
                 case CLOSE_APP_KEY:
                     Application.Current.Shutdown();
@@ -168,15 +165,14 @@ namespace Rendering
                 default:
                     break;
             }
-            DrawModel(model, camera);
-
+            DrawModel(_model, _camera);
         }
 
         private void InitializeRenderBuffer()
         {
-            renderEngine = new RenderEngine((int)camera.ScreenWidth, (int)camera.ScreenHeight);
-            renderEngine.FillRenderBuffer(backgroundColor);
-            imgScreen.Source = renderEngine.RenderBuffer;
+            _renderEngine = new RenderEngine((int)_camera.ScreenWidth, (int)_camera.ScreenHeight);
+            _renderEngine.FillRenderBuffer(_backgroundColor);
+            imgScreen.Source = _renderEngine.RenderBuffer;
         }
 
         private void DrawModel(Model? model, Camera camera)
@@ -184,18 +180,18 @@ namespace Rendering
             if (model == null) return;
 
             int start = Environment.TickCount;
-            renderEngine.DrawModel(model, camera, backgroundColor, surfaceColor, edgeColor, lightColor, drawMode);
+            _renderEngine.DrawModel(model, camera, _backgroundColor, _surfaceColor, _edgeColor, _lightColor, _drawMode);
             int stop = Environment.TickCount;
 
             // Show render information
-            renderInfo.RenderTime = stop - start;
-            tbInfo.Text = renderInfo.GetInfomation(model, camera, renderEngine.Rasterisation);
-            tbHelp.Text = renderInfo.GetHelp();
+            _renderInfo.RenderTime = stop - start;
+            tbInfo.Text = _renderInfo.GetInfomation(model, camera, _renderEngine.Rasterisation);
+            tbHelp.Text = _renderInfo.GetHelp();
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            mouseClickPosition = e.GetPosition(this);
+            _mouseClickPosition = e.GetPosition(this);
         }
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
@@ -203,77 +199,77 @@ namespace Rendering
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 Point clickPosition = e.GetPosition(this);
-                double deltaX = clickPosition.X - mouseClickPosition.X;
-                double deltaY = clickPosition.Y - mouseClickPosition.Y;
-                mouseClickPosition = clickPosition;
-                camera.MoveAzimuth(-deltaX);
-                camera.MoveZenith(-deltaY);
-                DrawModel(model, camera);
+                float deltaX = (float)(_mouseClickPosition.X - clickPosition.X);
+                float deltaY = (float)(_mouseClickPosition.Y - clickPosition.Y);
+                _mouseClickPosition = clickPosition;
+                _camera.AzimuthAngle += deltaX * _camera.AngleDelta;
+                _camera.ZenithAngle += deltaY * _camera.AngleDelta;
+                DrawModel(_model, _camera);
             }
         }
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (model == null)
+            if (_model == null)
             {
                 return;
             }
             if (e.Delta < 0)
             {
-                if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByX(-model.MoveStep);
-                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByY(-model.MoveStep);
-                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByZ(-model.MoveStep);
-                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate -= mouseRotationDelta;
-                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate -= mouseRotationDelta;
-                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate -= mouseRotationDelta;
-                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV -= camera.FovStep;
-                else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.DecreaseScaleStep();
-                else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale -= model.ScaleStep;
-                else if (Keyboard.IsKeyDown(CONTROL_KEY)) camera.DecreaseZoomStep();
-                else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) model.DecreaseMoveStep();
-                else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZNear -= camera.PlaneDistanceStep;
-                else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZFar -= camera.PlaneDistanceStep;
-                else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) camera.DecreasePlaneDistanceStep();
-                else camera.ZoomIn();
+                if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition -= _model.MoveStep;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.YPosition -= _model.MoveStep;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.ZPosition -= _model.MoveStep;
+                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) _model.XAxisRotate -= _model.MouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) _model.YAxisRotate -= _model.MouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) _model.ZAxisRotate -= _model.MouseRotationDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) _camera.FOV -= _camera.FovStep;
+                else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) _model.DecreaseScaleStep();
+                else if (Keyboard.IsKeyDown(SCALE_KEY)) _model.Scale -= _model.ScaleStep;
+                else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.DecreaseZoomStep();
+                else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) _model.DecreaseMoveStep();
+                else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZNear -= _camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZFar -= _camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) _camera.DecreasePlaneDistanceStep();
+                else _camera.ZoomIn();
             }
             else
             {
-                if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByX(model.MoveStep);
-                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByY(model.MoveStep);
-                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) model.MoveByZ(model.MoveStep);
-                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) model.XAxisRotate += mouseRotationDelta;
-                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) model.YAxisRotate += mouseRotationDelta;
-                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) model.ZAxisRotate += mouseRotationDelta;
-                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) camera.FOV += camera.FovStep;
-                else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) model.IncreaseScaleStep();
-                else if (Keyboard.IsKeyDown(SCALE_KEY)) model.Scale += model.ScaleStep;
-                else if (Keyboard.IsKeyDown(CONTROL_KEY)) camera.IncreaseZoomStep();
-                else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) model.IncreaseMoveStep();
-                else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZNear += camera.PlaneDistanceStep;
-                else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) camera.ZFar += camera.PlaneDistanceStep;
-                else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) camera.IncreasePlaneDistanceStep();
-                else camera.ZoomOut();
+                if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition += _model.MoveStep;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.YPosition += _model.MoveStep;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.ZPosition += _model.MoveStep;
+                else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) _model.XAxisRotate += _model.MouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) _model.YAxisRotate += _model.MouseRotationDelta;
+                else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) _model.ZAxisRotate += _model.MouseRotationDelta;
+                else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) _camera.FOV += _camera.FovStep;
+                else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) _model.IncreaseScaleStep();
+                else if (Keyboard.IsKeyDown(SCALE_KEY)) _model.Scale += _model.ScaleStep;
+                else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.IncreaseZoomStep();
+                else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) _model.IncreaseMoveStep();
+                else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZNear += _camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZFar += _camera.PlaneDistanceStep;
+                else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) _camera.IncreasePlaneDistanceStep();
+                else _camera.ZoomOut();
             }
-            DrawModel(model, camera);
+            DrawModel(_model, _camera);
         }
 
         private void InvertColors()
         {
-            (backgroundColor, backgroundColorInvert) = (backgroundColorInvert, backgroundColor);
+            (_backgroundColor, _backgroundColorInvert) = (_backgroundColorInvert, _backgroundColor);
 
-            if (drawMode != DrawMode.Rasterisation)
+            if (_drawMode != DrawMode.Rasterisation)
             {
-                edgeColor = backgroundColorInvert;
+                _edgeColor = _backgroundColorInvert;
             }
 
-            Brush textBrush = new SolidColorBrush(backgroundColorInvert);
+            Brush textBrush = new SolidColorBrush(_backgroundColorInvert);
             tbInfo.Foreground = textBrush;
             tbHelp.Foreground = textBrush;
         }
 
         private void ChangeRasterisation()
         {
-            renderEngine.Rasterisation = rasterisationMethods[++rasterisationMethodIndex % rasterisationMethods.Length];
+            _renderEngine.Rasterisation = _rasterisationMethods[++_rasterisationMethodIndex % _rasterisationMethods.Length];
         }
 
         private void ToggleVisibility(TextBlock textBlock)

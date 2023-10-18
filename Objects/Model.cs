@@ -1,4 +1,5 @@
 ﻿using Rendering.Primitives;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -13,12 +14,14 @@ namespace Rendering.Objects
         private float xAxisRotate = 0;
         private float yAxisRotate = 0;
         private float zAxisRotate = 0;
+        private float xPosition = 0;
+        private float yPosition = 0;
+        private float zPosition = 0;
         private float scale = 1.0f;
+
         public float ScaleStep = 0.1f;
         public float MoveStep = 1f;
-        public float XPosition = 0;
-        public float YPosition = 0;
-        public float ZPosition = 0;
+        public float MouseRotationDelta = MathF.PI / 36;
 
         private Matrix4x4 ScaleMatrix;
         private Matrix4x4 RotationX;
@@ -27,21 +30,6 @@ namespace Rendering.Objects
         private Matrix4x4 Move;
         public Matrix4x4 Transformation { get; private set; }
 
-        public float Scale
-        {
-            get { return scale; }
-            set
-            {
-                if (scale != value)
-                {
-                    if (value > 0) scale = value;
-                    else scale = 0;
-
-                    ScaleMatrix = Matrix4x4.CreateScale(scale);
-                    UpdateTransformation();
-                }
-            }
-        }
 
         public float XAxisRotate
         {
@@ -85,13 +73,71 @@ namespace Rendering.Objects
             }
         }
 
+        public float XPosition
+        {
+            get => xPosition;
+            set
+            {
+                if (xPosition != value)
+                {
+                    xPosition = value;
+                    Move = Matrix4x4.CreateTranslation(xPosition, yPosition, zPosition);
+                    UpdateTransformation();
+                }
+            }
+        }
+
+        public float YPosition
+        {
+            get => yPosition;
+            set
+            {
+                if (yPosition != value)
+                {
+                    yPosition = value;
+                    Move = Matrix4x4.CreateTranslation(xPosition, yPosition, zPosition);
+                    UpdateTransformation();
+                }
+            }
+        }
+
+        public float ZPosition
+        {
+            get => zPosition;
+            set
+            {
+                if (zPosition != value)
+                {
+                    zPosition = value;
+                    Move = Matrix4x4.CreateTranslation(xPosition, yPosition, zPosition);
+                    UpdateTransformation();
+                }
+            }
+        }
+
+        public float Scale
+        {
+            get { return scale; }
+            set
+            {
+                if (scale != value)
+                {
+                    if (value > 0) scale = value;
+                    else scale = 0;
+
+                    ScaleMatrix = Matrix4x4.CreateScale(scale);
+                    UpdateTransformation();
+                }
+            }
+        }
+
         public Model()
         {
             ScaleMatrix = Matrix4x4.CreateScale(scale);
             RotationX = Matrix4x4.CreateRotationX(xAxisRotate);
             RotationY = Matrix4x4.CreateRotationY(yAxisRotate);
             RotationZ = Matrix4x4.CreateRotationZ(zAxisRotate);
-            Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
+            Move = Matrix4x4.CreateTranslation(xPosition, yPosition, zPosition);
             UpdateTransformation();
         }
 
@@ -156,27 +202,6 @@ namespace Rendering.Objects
             if (MoveStep < 0.1f) MoveStep = 0.1f;
         }
 
-        public void MoveByX(float moveStep)
-        {
-            XPosition += moveStep;
-            Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
-            UpdateTransformation();
-        }
-
-        public void MoveByY(float moveStep)
-        {
-            YPosition += moveStep;
-            Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
-            UpdateTransformation();
-        }
-
-        public void MoveByZ(float moveStep)
-        {
-            ZPosition += moveStep;
-            Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
-            UpdateTransformation();
-        }
-
         public void MoveToWorldCenter()
         {
             float xMin = Vertices.Min(v => v.Original.X);
@@ -185,23 +210,23 @@ namespace Rendering.Objects
             float yMax = Vertices.Max(v => v.Original.Y);
             float zMin = Vertices.Min(v => v.Original.Z);
             float zMax = Vertices.Max(v => v.Original.Z);
-            XPosition = -(xMax + xMin) / 2;
-            YPosition = -(yMax + yMin) / 2;
-            ZPosition = -(zMax + zMin) / 2;
-            Move = Matrix4x4.CreateTranslation(new Vector3(XPosition, YPosition, ZPosition));
+            xPosition = -(xMax + xMin) / 2;
+            yPosition = -(yMax + yMin) / 2;
+            zPosition = -(zMax + zMin) / 2;
+            Move = Matrix4x4.CreateTranslation(new Vector3(xPosition, yPosition, zPosition));
             UpdateTransformation();
         }
 
         public void SetInitialPositioin()
         {
             Scale = 1.0f;
-            XPosition = 0;
-            YPosition = 0;
-            ZPosition = 0;
+            xPosition = 0;
+            yPosition = 0;
+            zPosition = 0;
             XAxisRotate = 0;
             YAxisRotate = 0;
             ZAxisRotate = 0;
-            Move = Matrix4x4.CreateTranslation(XPosition, YPosition, ZPosition);
+            Move = Matrix4x4.CreateTranslation(xPosition, yPosition, zPosition);
             MoveToWorldCenter();
         }
     }

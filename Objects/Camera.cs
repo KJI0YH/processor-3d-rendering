@@ -18,7 +18,8 @@ namespace Rendering.Objects
         public Vector3 Target { get; private set; } = new Vector3(0, 0, 0);
         public Vector3 Up { get; private set; } = new Vector3(0, 1, 0);
         public float ZoomStep = 0.1f;
-        public const float AngleDelta = MathF.PI / 360;
+        public float AngleDelta = MathF.PI / 360;
+        public float KeyRotation = MathF.PI / 36;
         public float FovStep = MathF.PI / 180;
         public float PlaneDistanceStep = 1;
 
@@ -105,6 +106,30 @@ namespace Rendering.Objects
             }
         }
 
+        public float AzimuthAngle
+        {
+            get => SphericalPosition.AzimuthAngle;
+            set
+            {
+                SphericalPosition.AzimuthAngle = value;
+                UpdateViewMatrix();
+            }
+        }
+
+        public float ZenithAngle
+        {
+            get => SphericalPosition.ZenithAngle;
+            set
+            {
+                SphericalPosition.ZenithAngle = value;
+                float upX = -MathF.Cos(SphericalPosition.ZenithAngle) * MathF.Sin(SphericalPosition.AzimuthAngle);
+                float upY = MathF.Sin(SphericalPosition.ZenithAngle);
+                float upZ = -MathF.Cos(SphericalPosition.ZenithAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);
+                Up = new Vector3(upX, upY, upZ);
+                UpdateViewMatrix();
+            }
+        }
+
         public Camera()
         {
             UpdateViewMatrix();
@@ -146,22 +171,6 @@ namespace Rendering.Objects
                 SphericalPosition.R -= ZoomStep;
                 UpdateViewMatrix();
             }
-        }
-
-        public void MoveAzimuth(double deltaX)
-        {
-            SphericalPosition.AzimuthAngle += (float)deltaX * AngleDelta;
-            UpdateViewMatrix();
-        }
-
-        public void MoveZenith(double deltaY)
-        {
-            SphericalPosition.ElevationAngle += (float)deltaY * AngleDelta;
-            float upX = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Sin(SphericalPosition.AzimuthAngle);
-            float upY = MathF.Sin(SphericalPosition.ElevationAngle);
-            float upZ = -MathF.Cos(SphericalPosition.ElevationAngle) * MathF.Cos(SphericalPosition.AzimuthAngle);
-            Up = new Vector3(upX, upY, upZ);
-            UpdateViewMatrix();
         }
 
         public void IncreaseZoomStep()

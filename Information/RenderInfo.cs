@@ -30,7 +30,7 @@ namespace Rendering.Information
                 .AppendLine($"R: {camera.SphericalPosition.R:F2}")
                 .AppendLine($"Zoom step: {camera.ZoomStep:F2}")
                 .AppendLine($"Azimuth angle: {RadianToDegree(camera.SphericalPosition.AzimuthAngle):N0}°")
-                .AppendLine($"Elevation angle: {RadianToDegree(camera.SphericalPosition.ElevationAngle):N0}°")
+                .AppendLine($"Elevation angle: {RadianToDegree(camera.SphericalPosition.ZenithAngle):N0}°")
                 .AppendLine($"Camera position: ({cameraPosition.X:F2}, {cameraPosition.Y:F2}, {cameraPosition.Z:F2})")
                 .AppendLine($"Camera target: ({camera.Target.X}, {camera.Target.Y}, {camera.Target.Z})")
                 .AppendLine($"FOV: {RadianToDegree(camera.FOV):N0}°")
