@@ -90,6 +90,7 @@ namespace Rendering.Engine
                     }
                 }
             }
+            catch (Exception) { }
             finally
             {
                 // Release the back buffer and make it available for display
@@ -153,30 +154,20 @@ namespace Rendering.Engine
 
         public void DrawPolygon(Polygon polygon, Color surfaceColor, Color edgeColor)
         {
-            // Select the top vertex (0)
             Vector4 vertex0 = polygon.Vertices[0].ViewPort;
             Vector4 vertex1 = polygon.Vertices[1].ViewPort;
             Vector4 vertex2 = polygon.Vertices[2].ViewPort;
-            if (vertex0.Y > vertex1.Y)
-            {
-                (vertex0, vertex1) = (vertex1, vertex0);
-            }
 
-            if (vertex0.Y > vertex2.Y)
-            {
-                (vertex0, vertex2) = (vertex2, vertex0);
-            }
-
+            // Select the top vertex (0)
+            if (vertex0.Y > vertex1.Y) (vertex0, vertex1) = (vertex1, vertex0);
+            if (vertex0.Y > vertex2.Y) (vertex0, vertex2) = (vertex2, vertex0);
             // Select the middle (1) and bottom (2) vertex
-            if (vertex1.Y > vertex2.Y)
-            {
-                (vertex1, vertex2) = (vertex2, vertex1);
-            }
+            if (vertex1.Y > vertex2.Y) (vertex1, vertex2) = (vertex2, vertex1);
 
             // Draw polygon shape
-            // DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
-            // DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            // DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), surfaceColor);
+            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), surfaceColor);
+            DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), surfaceColor);
 
             float crossX1, crossX2, crossZ1, crossZ2;
             float dx1 = vertex1.X - vertex0.X;
@@ -208,7 +199,7 @@ namespace Rendering.Engine
             dz = dy1 == 0 ? 0 : dz1 / dy1;
 
             // Draw second part of triangle
-            while (currentY < vertex2.Y)
+            while (currentY <= vertex2.Y)
             {
                 crossX1 = vertex1.X + dx1 / dy1 * (currentY - vertex1.Y);
                 crossX2 = vertex0.X + dx2 / dy2 * (currentY - vertex0.Y);
@@ -219,18 +210,18 @@ namespace Rendering.Engine
                 currentZ += dz;
             }
 
-            // DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            // DrawPolygonEdge(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            // DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
+            //DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            //DrawPolygonEdge(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
+            //DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
         }
 
         // Polygon edge line drawing with pixel depth
         public void DrawPolygonEdge(Vector3 start, Vector3 end, Color color)
         {
-            int xStart = (int)MathF.Round(start.X);
-            int yStart = (int)MathF.Round(start.Y);
-            int xEnd = (int)MathF.Round(end.X);
-            int yEnd = (int)MathF.Round(end.Y);
+            int xStart = (int)MathF.Floor(start.X);
+            int yStart = (int)MathF.Floor(start.Y);
+            int xEnd = (int)MathF.Ceiling(end.X);
+            int yEnd = (int)MathF.Ceiling(end.Y);
 
             if (zBuffer[xStart, yStart] < start.Z || zBuffer[xEnd, yEnd] < end.Z) return;
 
