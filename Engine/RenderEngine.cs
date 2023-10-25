@@ -51,7 +51,6 @@ namespace Rendering.Engine
             RenderBuffer.WritePixels(new Int32Rect(0, 0, _width, _height), _pixelData, _stride, 0);
         }
 
-        // Line drawing without pixel depth
         public void DrawLine(Vector2 start, Vector2 end, Color color)
         {
             int colorData = GetColorData(color);
@@ -62,35 +61,12 @@ namespace Rendering.Engine
 
                 foreach (Pixel pixel in Rasterisation.Rasterise(start, end))
                 {
-                    SetPixelData(pixel.X, pixel.Y, colorData);
-                }
-            }
-            finally
-            {
-                // Release the back buffer and make it available for display
-                RenderBuffer.Unlock();
-            }
-        }
-
-        // Line drawing with pixel depth
-        public void DrawLine(Vector3 start, Vector3 end, Color color)
-        {
-            int colorData = GetColorData(color);
-            try
-            {
-                // Reserve the back buffer for updates
-                RenderBuffer.Lock();
-
-                foreach (Pixel pixel in Rasterisation.Rasterise(start, end))
-                {
-                    if (zBuffer[pixel.X, pixel.Y] > pixel.Depth)
+                    if (pixel.X >= 0 && pixel.X < _width && pixel.Y >= 0 && pixel.Y < _height)
                     {
-                        zBuffer[pixel.X, pixel.Y] = pixel.Depth;
                         SetPixelData(pixel.X, pixel.Y, colorData);
                     }
                 }
             }
-            catch (Exception) { }
             finally
             {
                 // Release the back buffer and make it available for display
@@ -140,6 +116,14 @@ namespace Rendering.Engine
             return colorData;
         }
 
+        private int GetColorData(Vector3 color)
+        {
+            int colorData = (int)(255 * color.X) << 16;
+            colorData |= (int)(255 * color.Y) << 8;
+            colorData |= ((int)(255 * color.Z));
+            return colorData;
+        }
+
         private Color GetPolygonColor(Color lightColor, Color surfaceColor, Vector3 lightPosition, Polygon polygon)
         {
             Color color = new();
@@ -152,80 +136,87 @@ namespace Rendering.Engine
             return color;
         }
 
-        public void DrawPolygon(Polygon polygon, Color surfaceColor, Color edgeColor)
+        public void DrawPolygon(Polygon polygon, Color surfaceColor)
         {
             Vector4 vertex0 = polygon.Vertices[0].ViewPort;
             Vector4 vertex1 = polygon.Vertices[1].ViewPort;
             Vector4 vertex2 = polygon.Vertices[2].ViewPort;
 
-            // Select the top vertex (0)
-            if (vertex0.Y > vertex1.Y) (vertex0, vertex1) = (vertex1, vertex0);
-            if (vertex0.Y > vertex2.Y) (vertex0, vertex2) = (vertex2, vertex0);
-            // Select the middle (1) and bottom (2) vertex
-            if (vertex1.Y > vertex2.Y) (vertex1, vertex2) = (vertex2, vertex1);
+            Vector3 point0 = new Vector3(vertex0.X, vertex0.Y, vertex0.Z);
+            Vector3 point1 = new Vector3(vertex1.X, vertex1.Y, vertex1.Z);
+            Vector3 point2 = new Vector3(vertex2.X, vertex2.Y, vertex2.Z);
 
-            // Draw polygon shape
-            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), surfaceColor);
-            DrawLine(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), surfaceColor);
-            DrawLine(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), surfaceColor);
+            Vector3 color0 = new Vector3(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
+            Vector3 color1 = new Vector3(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
+            Vector3 color2 = new Vector3(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
 
-            float crossX1, crossX2, crossZ1, crossZ2;
-            float dx1 = vertex1.X - vertex0.X;
-            float dy1 = vertex1.Y - vertex0.Y;
-            float dx2 = vertex2.X - vertex0.X;
-            float dy2 = vertex2.Y - vertex0.Y;
-            float dz1 = vertex1.Z - vertex0.Z;
-            float dz2 = vertex2.Z - vertex0.Z;
-
-            float currentY = vertex0.Y;
-            float currentZ = vertex0.Z;
-            float dz = dy1 == 0 ? 0 : dz1 / dy1;
-
-            // Draw first part of triangle
-            while (currentY < vertex1.Y)
-            {
-                crossX1 = vertex0.X + dx1 / dy1 * (currentY - vertex0.Y);
-                crossX2 = vertex0.X + dx2 / dy2 * (currentY - vertex0.Y);
-                crossZ1 = vertex0.Z + dz1 / dy1 * (currentZ - vertex0.Z);
-                crossZ2 = vertex0.Z + dz2 / dy2 * (currentZ - vertex0.Z);
-                DrawLine(new Vector3(crossX1, currentY, crossZ1), new Vector3(crossX2, currentY, crossZ2), surfaceColor);
-                currentY++;
-                currentZ += dz;
-            }
-
-            dx1 = vertex2.X - vertex1.X;
-            dy1 = vertex2.Y - vertex1.Y;
-            dz1 = vertex2.Z - vertex1.Z;
-            dz = dy1 == 0 ? 0 : dz1 / dy1;
-
-            // Draw second part of triangle
-            while (currentY <= vertex2.Y)
-            {
-                crossX1 = vertex1.X + dx1 / dy1 * (currentY - vertex1.Y);
-                crossX2 = vertex0.X + dx2 / dy2 * (currentY - vertex0.Y);
-                crossZ1 = vertex1.Z + dz1 / dy1 * (currentZ - vertex1.Z);
-                crossZ2 = vertex0.Z + dz2 / dy2 * (currentZ - vertex0.Z);
-                DrawLine(new Vector3(crossX1, currentY, crossZ1), new Vector3(crossX2, currentY, crossZ2), surfaceColor);
-                currentY++;
-                currentZ += dz;
-            }
-
-            //DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            //DrawPolygonEdge(new Vector3(vertex1.X, vertex1.Y, vertex1.Z), new Vector3(vertex2.X, vertex2.Y, vertex2.Z), edgeColor);
-            //DrawPolygonEdge(new Vector3(vertex0.X, vertex0.Y, vertex0.Z), new Vector3(vertex1.X, vertex1.Y, vertex1.Z), edgeColor);
+            ScanLineTriangle(point0, point1, point2, color0, color1, color2);
         }
 
-        // Polygon edge line drawing with pixel depth
-        public void DrawPolygonEdge(Vector3 start, Vector3 end, Color color)
+        private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2, Vector3 color0, Vector3 color1, Vector3 color2)
         {
-            int xStart = (int)MathF.Floor(start.X);
-            int yStart = (int)MathF.Floor(start.Y);
-            int xEnd = (int)MathF.Ceiling(end.X);
-            int yEnd = (int)MathF.Ceiling(end.Y);
+            // Vertex sort
+            if (point0.Y > point2.Y)
+            {
+                (point0, point2) = (point2, point0);
+                (color0, color2) = (color2, color0);
+            }
+            if (point0.Y > point1.Y)
+            {
+                (point0, point1) = (point1, point0);
+                (color0, color1) = (color1, color0);
+            }
+            if (point1.Y > point2.Y)
+            {
+                (point1, point2) = (point2, point1);
+                (color1, color2) = (color2, color1);
+            }
 
-            if (zBuffer[xStart, yStart] < start.Z || zBuffer[xEnd, yEnd] < end.Z) return;
+            Vector3 kPoint0 = (point2 - point0) / (point2.Y - point0.Y);
+            Vector3 kPoint1 = (point1 - point0) / (point1.Y - point0.Y);
+            Vector3 kPoint2 = (point2 - point1) / (point2.Y - point1.Y);
+            Vector3 kColor0 = (color1 - color0) / (point2.Y - point0.Y);
+            Vector3 kColor1 = (color1 - color0) / (point1.Y - point0.Y);
+            Vector3 kColor2 = (color2 - color1) / (point2.Y - point1.Y);
+            int top = Math.Max(0, (int)Math.Ceiling(point0.Y));
+            int bottom = Math.Min(_height - 1, (int)Math.Ceiling(point2.Y));
+            try
+            {
+                // Reserve the back buffer for updates
+                RenderBuffer.Lock();
 
-            DrawLine(new Vector2(start.X, start.Y), new Vector2(end.X, end.Y), color);
+                for (int y = top; y < bottom; y++)
+                {
+                    Vector3 leftCross = point0 + (y - point0.Y) * kPoint0;
+                    Vector3 leftColor = color0 + (y - point0.Y) * kColor0;
+                    Vector3 rightCross = y < point1.Y ? point0 + (y - point0.Y) * kPoint1 : point1 + (y - point1.Y) * kPoint2;
+                    Vector3 rightColor = y < point1.Y ? color0 + (y - point0.Y) * kColor1 : color1 + (y - point1.Y) * kColor2;
+                    if (leftCross.X > rightCross.X)
+                    {
+                        (leftCross, rightCross) = (rightCross, leftCross);
+                        (leftColor, rightColor) = (rightColor, leftColor);
+                    }
+                    Vector3 kColor = (rightColor - leftColor) / (rightCross.X - leftCross.X);
+                    int left = Math.Max(0, (int)Math.Ceiling(leftCross.X));
+                    int right = Math.Min(_width - 1, (int)Math.Ceiling(rightCross.X));
+                    for (int x = left; x < right; x++)
+                    {
+                        Vector3 color = leftColor + (x - leftCross.X) * kColor;
+                        float zDepth = point0.Z + (x - leftCross.X) * kColor.Z;
+                        if (zDepth < zBuffer[x, y])
+                        {
+                            zBuffer[x, y] = zDepth;
+                            SetPixelData(x, y, GetColorData(color));
+                        }
+                    }
+                }
+            }
+            catch (Exception) { }
+            finally
+            {
+                // Release the back buffer and make it available for display
+                RenderBuffer.Unlock();
+            }
         }
 
         public void DrawModel(Model model, Camera camera, Color backColor, Color surfaceColor, Color edgeColor, Color lightColor, DrawMode drawMode)
@@ -265,25 +256,21 @@ namespace Rendering.Engine
 
                     // Draw only visible lines
                     case DrawMode.Wire:
-                        if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective))
-                            DrawLine(new Vector2(vertexA.ViewPort.X, vertexA.ViewPort.Y), new Vector2(vertexB.ViewPort.X, vertexB.ViewPort.Y), edgeColor);
-                        if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexC.Perspective))
-                            DrawLine(new Vector2(vertexA.ViewPort.X, vertexA.ViewPort.Y), new Vector2(vertexC.ViewPort.X, vertexC.ViewPort.Y), edgeColor);
-                        if (IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
-                            DrawLine(new Vector2(vertexB.ViewPort.X, vertexB.ViewPort.Y), new Vector2(vertexC.ViewPort.X, vertexC.ViewPort.Y), edgeColor);
+                        Vector2 v1 = new Vector2(vertexA.ViewPort.X, vertexA.ViewPort.Y);
+                        Vector2 v2 = new Vector2(vertexB.ViewPort.X, vertexB.ViewPort.Y);
+                        Vector2 v3 = new Vector2(vertexC.ViewPort.X, vertexC.ViewPort.Y);
+                        DrawLine(v1, v2, edgeColor);
+                        DrawLine(v1, v3, edgeColor);
+                        DrawLine(v2, v3, edgeColor);
                         break;
 
                     // Draw only visible rasterizated polygons
                     case DrawMode.Rasterisation:
-
-                        // Check visibility of polygon
-                        Vector3 target = new(vertexA.Transform.X - camera.Position.X, vertexA.Transform.Y - camera.Position.Y, vertexA.Transform.Z - camera.Position.Z);
-                        if (Vector3.Dot(polygon.Normal, Vector3.Normalize(target)) > 0)
-                            if (IsVertexVisible(vertexA.Perspective) && IsVertexVisible(vertexB.Perspective) && IsVertexVisible(vertexC.Perspective))
-                            {
-                                Color polygonColor = GetPolygonColor(lightColor, surfaceColor, -camera.Position, polygon);
-                                DrawPolygon(polygon, polygonColor, edgeColor);
-                            }
+                        if (IsPolygonVisible(polygon, camera.Position))
+                        {
+                            Color polygonColor = GetPolygonColor(lightColor, surfaceColor, -camera.Position, polygon);
+                            DrawPolygon(polygon, polygonColor);
+                        }
                         break;
                 }
             }
@@ -292,6 +279,16 @@ namespace Rendering.Engine
         private bool IsVertexVisible(Vector4 perspectiveVertex)
         {
             return perspectiveVertex.X >= -1 && perspectiveVertex.X <= 1 && perspectiveVertex.Y >= -1 && perspectiveVertex.Y <= 1 && perspectiveVertex.Z >= -1 && perspectiveVertex.Z <= 1;
+        }
+
+        private bool IsPolygonVisible(Polygon polygon, Vector3 cameraPosition)
+        {
+            Vector3 target = Vector3.Normalize(new(
+                polygon.Vertices[0].Transform.X - cameraPosition.X,
+                polygon.Vertices[0].Transform.Y - cameraPosition.Y,
+                polygon.Vertices[0].Transform.Z - cameraPosition.Z
+            ));
+            return (Vector3.Dot(polygon.Normal, target) > 0);
         }
 
         private void ResetZBuffer()
