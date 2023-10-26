@@ -1,109 +1,153 @@
-﻿using Rendering.Exceptions;
+﻿using System;
+using Rendering.Exceptions;
 using Rendering.Objects;
 using Rendering.Primitives;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 
-namespace Rendering.Parser
+namespace Rendering.Parser;
+
+public class ObjParser : IModelParser
 {
-    public class ObjParser : IModelParser
+    private readonly List<Position> _readPositions = new();
+    private readonly List<Vector3> _readNormals = new();
+    private readonly List<Vector3> _readTextures = new();
+    private readonly List<Polygon> _readPolygons = new();
+
+    private void InitParser()
     {
-        public Model Parse(string filename)
+        _readPositions.Clear();
+        _readNormals.Clear();
+        _readTextures.Clear();
+        _readPolygons.Clear();
+    }
+
+    public Model Parse(string filename)
+    {
+        InitParser();
+        var fileStream = new FileStream(filename, FileMode.Open, FileAccess.Read);
+        using var streamReader = new StreamReader(fileStream);
+        var line = string.Empty;
+        var lineCount = 0;
+        try
         {
-            Model model = new();
-            var fileStream = new FileStream(filename, FileMode.Open, FileAccess.Read); ;
-            using (var streamReader = new StreamReader(fileStream))
+            while ((line = streamReader?.ReadLine()) != null)
             {
-                string? line = string.Empty;
-                int lineCount = 0, vertexCount = 0;
-                try
+                lineCount++;
+                var tokens = line.Trim().Replace('.', ',').Split(' ');
+                switch (tokens[0])
                 {
-                    while ((line = streamReader?.ReadLine()) != null)
-                    {
-                        lineCount++;
-                        string[] tokens = line.Trim().Replace('.', ',').Split(' ');
-                        switch (tokens[0])
-                        {
-                            case "v":
-                                model.AddVertex(ParseVertex(tokens, ++vertexCount));
-                                break;
-                            case "vt":
-                                break;
-                            case "vn":
-                                break;
-                            case "f":
-                                Polygon polygon = ParsePolygon(tokens, model.Vertices);
-                                if (polygon.Vertices.Count > 3)
-                                {
-                                    model.AddPolygon(polygon.Triangulate());
-                                }
-                                else
-                                {
-                                    model.AddPolygon(polygon);
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                }
-                catch (ParserException exception)
-                {
-                    throw new ParserException($"Error in line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
-                }
-                if (model.IsEmpty())
-                {
-                    throw new ParserException($"File does not contain a model in obj format");
+                    case "v":
+                        _readPositions.Add(ParsePosition(tokens));
+                        break;
+                    case "vt":
+                        _readTextures.Add(ParseTexture(tokens));
+                        break;
+                    case "vn":
+                        _readNormals.Add(ParseNormal(tokens));
+                        break;
+                    case "f":
+                        _readPolygons.AddRange(ParsePolygon(tokens));
+                        break;
                 }
             }
-            return model;
         }
-
-        private Vertex ParseVertex(string[] tokens, int vertexIndex)
+        catch (ParserException exception)
         {
-            if (tokens.Length >= 4)
-            {
-                if (float.TryParse(tokens[1], out float x) && float.TryParse(tokens[2], out float y) && float.TryParse(tokens[3], out float z))
-                {
-                    if (tokens.Length == 5 && float.TryParse(tokens[4], out float w))
-                    {
-                        return new Vertex(new Vector4(x, y, z, w), vertexIndex);
-                    }
-                    return new Vertex(new Vector4(x, y, z, 1), vertexIndex);
-                }
-            }
-            throw new ParserException("Invalid vertex syntax");
+            throw new ParserException(
+                $"Error in line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
         }
 
-        private Polygon ParsePolygon(string[] tokens, List<Vertex> readVertices)
+        Model model = new(_readPositions, _readPolygons);
+        if (model.IsEmpty()) throw new ParserException($"File does not contain a model in obj format");
+        return model;
+    }
+
+
+    private static Position ParsePosition(string[] tokens)
+    {
+        if (tokens.Length >= 4)
+            if (float.TryParse(tokens[1], out var x) &&
+                float.TryParse(tokens[2], out var y) &&
+                float.TryParse(tokens[3], out var z))
+            {
+                if (tokens.Length == 5 && float.TryParse(tokens[4], out var w))
+                    return new Position(new Vector4(x, y, z, w));
+                return new Position(new Vector4(x, y, z, 1));
+            }
+
+        throw new ParserException("Invalid vertex syntax");
+    }
+
+    private static Vector3 ParseTexture(string[] tokens)
+    {
+        var values = new float[3];
+        var length = Math.Min(3, tokens.Length - 1);
+        if (length == 0) throw new ParserException("Invalid vertex texture syntax");
+        for (var index = 0; index < length; index++)
+            if (!float.TryParse(tokens[index + 1], out values[index]))
+                throw new ParserException("Invalid vertex texture syntax");
+        return new Vector3(values[0], values[1], values[2]);
+    }
+
+    private static Vector3 ParseNormal(string[] tokens)
+    {
+        if (tokens.Length != 4) throw new ParserException("Invalid vertex normal syntax");
+
+        if (float.TryParse(tokens[1], out var i) &&
+            float.TryParse(tokens[2], out var j) &&
+            float.TryParse(tokens[3], out var k))
+            return new Vector3(i, j, k);
+
+        throw new ParserException("Invalid vertex normal syntax");
+    }
+
+    private IEnumerable<Polygon> ParsePolygon(IReadOnlyList<string> tokens)
+    {
+        if (tokens.Count < 4) throw new ParserException("Invalid polygon syntax");
+
+        List<Vertex> vertices = new();
+        for (var i = 1; i < tokens.Count; i++)
         {
-            if (tokens.Length >= 4)
-            {
-                List<Vertex> vertices = new();
-                for (int i = 1; i < tokens.Length; i++)
-                {
-                    string[] vertexToken = tokens[i].Split('/');
-                    if (int.TryParse(vertexToken[0], out int vertexIndex))
-                    {
-                        // Correct vertex index to access from early readed vertices
-                        if (vertexIndex < 0) vertexIndex += readVertices.Count;
-                        else vertexIndex--;
+            Vertex vertex = new();
+            var token = tokens[i].Split('/');
 
-                        vertices.Add(readVertices[vertexIndex]);
-                    }
-                }
+            // Parse vertex index
+            if (int.TryParse(token[0], out var vIndex))
+                vertex.Position = _readPositions[CorrectIndex(vIndex, _readPositions.Count)];
 
-                try
-                {
-                    return new Polygon(vertices);
-                }
-                catch (InvalidPolygonException exception)
-                {
-                    throw new ParserException($"Invalid polygon: {exception.Message}");
-                }
-            }
-            throw new ParserException("Invalid polygon syntax");
+            // Parse vertex texture index
+            if (int.TryParse(token[1], out var vtIndex))
+                vertex.Texture = _readTextures[CorrectIndex(vtIndex, _readTextures.Count)];
+
+            // Parse vertex normal index
+            if (int.TryParse(token[2], out var vnIndex))
+                vertex.Normal = _readNormals[CorrectIndex(vnIndex, _readNormals.Count)];
+
+            vertices.Add(vertex);
         }
+
+        try
+        {
+            var polygon = new Polygon(vertices);
+            if (polygon.CanTriangulate())
+                return polygon.Triangulate();
+            return new List<Polygon>()
+            {
+                polygon
+            };
+        }
+        catch (InvalidPolygonException exception)
+        {
+            throw new ParserException($"Invalid polygon: {exception.Message}");
+        }
+    }
+
+    private static int CorrectIndex(int index, int maxLength)
+    {
+        if (index < 0)
+            return index + maxLength;
+        return --index;
     }
 }

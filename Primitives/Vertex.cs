@@ -1,21 +1,14 @@
 ﻿using System.Numerics;
 
-namespace Rendering.Primitives
-{
-    public class Vertex
-    {
-        public int Index { get; }
-        public Vector4 Original { get; }
-        public Vector4 Transform;
-        public Vector4 CameraView;
-        public Vector4 Projected;
-        public Vector4 Perspective;
-        public Vector4 ViewPort;
+namespace Rendering.Primitives;
 
-        public Vertex(Vector4 original, int index)
-        {
-            Original = original;
-            Index = index;
-        }
+public struct Vertex
+{
+    public Position Position = new(new Vector4(0, 0, 0, 0));
+    public Vector3 Normal = new(0, 0, 0);
+    public Vector3 Texture = new(0, 0, 0);
+
+    public Vertex()
+    {
     }
 }
