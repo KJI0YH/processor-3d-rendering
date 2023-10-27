@@ -12,11 +12,11 @@ public class Polygon
     public List<Vertex> Vertices { get; } = new();
     public Vector3 Normal => GetNormal();
 
-    public Polygon(List<Vertex> vertices)
+    public Polygon(IReadOnlyCollection<Vertex> vertices)
     {
         if (vertices.Count < 3) throw new InvalidPolygonException("Vertices count less than 3");
 
-        foreach (var vertex in vertices) Vertices.Add(vertex);
+        Vertices.AddRange(vertices);
     }
 
     public IEnumerable<Polygon> Triangulate()
@@ -72,7 +72,7 @@ public class Polygon
 
     private Vector3 GetNormal()
     {
-        var ab = Vertices[0].Position.Transform - Vertices[1].Position.Transform;
+        var ab = Vertices[1].Position.Transform - Vertices[0].Position.Transform;
         var ac = Vertices[2].Position.Transform - Vertices[0].Position.Transform;
         return Vector3.Normalize(Vector3.Cross(new Vector3(ab.X, ab.Y, ab.Z), new Vector3(ac.X, ac.Y, ac.Z)));
     }

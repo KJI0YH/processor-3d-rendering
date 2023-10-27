@@ -3,18 +3,12 @@ using System.Numerics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Rendering.Information;
 using Rendering.Objects;
 using Rendering.Primitives;
 using Rendering.Rasterisation;
 
 namespace Rendering.Engine;
-
-public enum DrawMode
-{
-    VertexOnly,
-    Wire,
-    Rasterisation
-}
 
 public class RenderEngine
 {
@@ -27,6 +21,7 @@ public class RenderEngine
     public readonly WriteableBitmap RenderBuffer;
 
     public IRasterisation Rasterisation = new Bresenham();
+    public DrawMode DrawMode = DrawMode.Rasterisation;
 
     public RenderEngine(int pixelWidth, int pixelHeight)
     {
@@ -52,7 +47,7 @@ public class RenderEngine
         RenderBuffer.WritePixels(new Int32Rect(0, 0, _width, _height), _pixelData, _stride, 0);
     }
 
-    private void DrawLine(Vector2 start, Vector2 end, Color color)
+    private void DrawLine(Vector2 start, Vector2 end, Vector3 color)
     {
         var colorData = GetColorData(color);
         try
@@ -71,7 +66,7 @@ public class RenderEngine
         }
     }
 
-    private void DrawPixel(float x, float y, Color color)
+    private void DrawPixel(float x, float y, Vector3 color)
     {
         try
         {
@@ -105,14 +100,6 @@ public class RenderEngine
         RenderBuffer.AddDirtyRect(new Int32Rect(x, y, 1, 1));
     }
 
-    private int GetColorData(Color color)
-    {
-        var colorData = color.R << 16;
-        colorData |= color.G << 8;
-        colorData |= color.B << 0;
-        return colorData;
-    }
-
     private int GetColorData(Vector3 color)
     {
         var colorData = (int)(255 * color.X) << 16;
@@ -121,37 +108,49 @@ public class RenderEngine
         return colorData;
     }
 
-    private Color GetPolygonColor(Color lightColor, Color surfaceColor, Vector3 lightPosition, Polygon polygon)
+    private Vector3 GetPointColor(Vector3 normal, Vector3 lightColor, Vector3 lightPosition, Vector3 surfaceColor)
     {
-        Color color = new();
-        var intensity = Math.Max(Vector3.Dot(Vector3.Normalize(lightPosition), Vector3.Normalize(polygon.Normal)), 0);
-        Vector3 light = new(lightColor.R / 255.0f, lightColor.G / 255.0f, lightColor.B / 255.0f);
-        Vector3 surface = new(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
-        color.R = (byte)MathF.Round(intensity * light.X * surface.X * 255);
-        color.G = (byte)MathF.Round(intensity * light.Y * surface.Y * 255);
-        color.B = (byte)MathF.Round(intensity * light.Z * surface.Z * 255);
-        return color;
+        var intensity = Math.Max(Vector3.Dot(lightPosition, normal), 0);
+        return new Vector3(
+            intensity * lightColor.X * surfaceColor.X,
+            intensity * lightColor.Y * surfaceColor.Y,
+            intensity * lightColor.Z * surfaceColor.Z
+        );
     }
 
-    private void DrawPolygon(Polygon polygon, Color surfaceColor)
+    private void DrawPolygon(Polygon polygon, Vector3 lightColor, Vector3 lightPosition, Vector3 surfaceColor)
     {
-        var vertex0 = polygon.Vertices[0].Position.ViewPort;
-        var vertex1 = polygon.Vertices[1].Position.ViewPort;
-        var vertex2 = polygon.Vertices[2].Position.ViewPort;
+        var vertex0 = polygon.Vertices[0];
+        var vertex1 = polygon.Vertices[1];
+        var vertex2 = polygon.Vertices[2];
 
-        var point0 = new Vector3(vertex0.X, vertex0.Y, vertex0.Z);
-        var point1 = new Vector3(vertex1.X, vertex1.Y, vertex1.Z);
-        var point2 = new Vector3(vertex2.X, vertex2.Y, vertex2.Z);
+        var viewPort0 = vertex0.Position.ViewPort;
+        var viewPort1 = vertex1.Position.ViewPort;
+        var viewPort2 = vertex2.Position.ViewPort;
 
-        var color0 = new Vector3(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
-        var color1 = new Vector3(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
-        var color2 = new Vector3(surfaceColor.R / 255.0f, surfaceColor.G / 255.0f, surfaceColor.B / 255.0f);
+        var point0 = new Vector3(viewPort0.X, viewPort0.Y, viewPort0.Z);
+        var point1 = new Vector3(viewPort1.X, viewPort1.Y, viewPort1.Z);
+        var point2 = new Vector3(viewPort2.X, viewPort2.Y, viewPort2.Z);
+
+        Vector3 color0, color1, color2;
+
+        switch (DrawMode)
+        {
+            case DrawMode.PhongShading:
+                color0 = GetPointColor(vertex0.Normal, lightColor, lightPosition, surfaceColor);
+                color1 = GetPointColor(vertex1.Normal, lightColor, lightPosition, surfaceColor);
+                color2 = GetPointColor(vertex2.Normal, lightColor, lightPosition, surfaceColor);
+                break;
+            default:
+                color0 = color1 = color2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
+                break;
+        }
 
         ScanLineTriangle(point0, point1, point2, color0, color1, color2);
     }
 
-    private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2, Vector3 color0, Vector3 color1,
-        Vector3 color2)
+    private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2,
+        Vector3 color0, Vector3 color1, Vector3 color2)
     {
         // Vertex sort
         if (point0.Y > point2.Y)
@@ -175,11 +174,11 @@ public class RenderEngine
         var kPoint0 = (point2 - point0) / (point2.Y - point0.Y);
         var kPoint1 = (point1 - point0) / (point1.Y - point0.Y);
         var kPoint2 = (point2 - point1) / (point2.Y - point1.Y);
-        var kColor0 = (color1 - color0) / (point2.Y - point0.Y);
+        var kColor0 = (color2 - color0) / (point2.Y - point0.Y);
         var kColor1 = (color1 - color0) / (point1.Y - point0.Y);
         var kColor2 = (color2 - color1) / (point2.Y - point1.Y);
         var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
-        var bottom = Math.Min(_height - 1, (int)Math.Ceiling(point2.Y));
+        var bottom = Math.Min(_height, (int)Math.Ceiling(point2.Y));
         try
         {
             // Reserve the back buffer for updates
@@ -198,12 +197,13 @@ public class RenderEngine
                 }
 
                 var kColor = (rightColor - leftColor) / (rightCross.X - leftCross.X);
+                var kPoint = (rightCross - leftCross) / (rightCross.X - leftCross.X);
                 var left = Math.Max(0, (int)Math.Ceiling(leftCross.X));
-                var right = Math.Min(_width - 1, (int)Math.Ceiling(rightCross.X));
+                var right = Math.Min(_width, (int)Math.Ceiling(rightCross.X));
                 for (var x = left; x < right; x++)
                 {
                     var color = leftColor + (x - leftCross.X) * kColor;
-                    var zDepth = point0.Z + (x - leftCross.X) * kColor.Z;
+                    var zDepth = point0.Z + (x - leftCross.X) * kPoint.Z;
                     if (zDepth < _zBuffer[x, y])
                     {
                         _zBuffer[x, y] = zDepth;
@@ -219,12 +219,16 @@ public class RenderEngine
         }
     }
 
-    public void DrawModel(Model model, Camera camera, Color backColor, Color surfaceColor, Color edgeColor,
-        Color lightColor, DrawMode drawMode)
+    public void DrawModel(Model model, Camera camera, Color background, Color surface, Color edge, Color light)
     {
         // Fill background
-        FillRenderBuffer(backColor);
+        FillRenderBuffer(background);
         ResetZBuffer();
+
+        var surfaceColor = NormalizeColor(surface);
+        var edgeColor = NormalizeColor(edge);
+        var lightColor = NormalizeColor(light);
+        var lightPosition = Vector3.Normalize(camera.Position);
 
         // Projection of each vertex of the model
         foreach (var vertex in model.Positions)
@@ -243,7 +247,7 @@ public class RenderEngine
             var vertex1 = polygon.Vertices[1].Position;
             var vertex2 = polygon.Vertices[2].Position;
 
-            switch (drawMode)
+            switch (DrawMode)
             {
                 // Draw only visible vertices
                 case DrawMode.VertexOnly:
@@ -270,14 +274,13 @@ public class RenderEngine
 
                 // Draw only visible rasterizer polygons
                 case DrawMode.Rasterisation:
+                case DrawMode.PhongShading:
+                case DrawMode.PhongLighting:
                     if (IsPolygonVisible(polygon, camera.Position))
-                        if (IsVertexVisible(vertex0.Perspective) && IsVertexVisible(vertex1.Perspective) &&
+                        if (IsVertexVisible(vertex0.Perspective) &&
+                            IsVertexVisible(vertex1.Perspective) &&
                             IsVertexVisible(vertex2.Perspective))
-                        {
-                            var polygonColor = GetPolygonColor(lightColor, surfaceColor, -camera.Position, polygon);
-                            DrawPolygon(polygon, polygonColor);
-                        }
-
+                            DrawPolygon(polygon, lightColor, lightPosition, surfaceColor);
                     break;
             }
         }
@@ -297,7 +300,7 @@ public class RenderEngine
             polygon.Vertices[0].Position.Transform.Y - cameraPosition.Y,
             polygon.Vertices[0].Position.Transform.Z - cameraPosition.Z
         ));
-        return Vector3.Dot(polygon.Normal, target) > 0;
+        return Vector3.Dot(polygon.Normal, target) < 0;
     }
 
     private void ResetZBuffer()
@@ -305,5 +308,10 @@ public class RenderEngine
         for (var i = 0; i < _zBuffer.GetLength(0); i++)
         for (var j = 0; j < _zBuffer.GetLength(1); j++)
             _zBuffer[i, j] = 1.0f;
+    }
+
+    private Vector3 NormalizeColor(Color color)
+    {
+        return new Vector3(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f);
     }
 }

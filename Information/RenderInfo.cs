@@ -3,6 +3,7 @@ using Rendering.Rasterisation;
 using System;
 using System.Numerics;
 using System.Text;
+using Rendering.Engine;
 
 namespace Rendering.Information;
 
@@ -14,7 +15,7 @@ public class RenderInfo
     {
     }
 
-    public string GetInfomation(Model model, Camera camera, IRasterisation rasterisation)
+    public string GetInformation(RenderEngine renderEngine, Model model, Camera camera)
     {
         var cameraPosition = camera.SphericalPosition.ToCartesian();
         StringBuilder builder = new();
@@ -39,7 +40,8 @@ public class RenderInfo
             .AppendLine($"Near plane distance: {camera.ZNear}")
             .AppendLine($"Far plane distance: {camera.ZFar}")
             .AppendLine($"Plane distance step: {camera.PlaneDistanceStep}")
-            .AppendLine($"Rasterisation: {rasterisation.GetType().Name}")
+            .AppendLine($"Rasterisation: {renderEngine.Rasterisation.GetType().Name}")
+            .AppendLine($"Drawing mode: {renderEngine.DrawMode.ToString()}")
             .AppendLine($"Screen width: {camera.ScreenWidth}")
             .AppendLine($"Screen height: {camera.ScreenHeight}")
             .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight:F5}");
@@ -74,6 +76,7 @@ public class RenderInfo
             .AppendLine("Vertex only drawing mode: 0")
             .AppendLine("Wire drawing mode: 1")
             .AppendLine("Rasterisation drawing mode: 2")
+            .AppendLine("Phong shading drawing mode: 3")
             .AppendLine("To toggle the render information: I")
             .AppendLine("To toggle the help : F1");
         return builder.ToString();

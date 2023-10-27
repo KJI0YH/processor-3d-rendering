@@ -59,7 +59,7 @@ public class ObjParser : IModelParser
                 $"Error in line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
         }
 
-        Model model = new(_readPositions, _readPolygons);
+        Model model = new(_readPositions, _readNormals, _readPolygons);
         if (model.IsEmpty()) throw new ParserException($"File does not contain a model in obj format");
         return model;
     }
@@ -98,7 +98,7 @@ public class ObjParser : IModelParser
         if (float.TryParse(tokens[1], out var i) &&
             float.TryParse(tokens[2], out var j) &&
             float.TryParse(tokens[3], out var k))
-            return new Vector3(i, j, k);
+            return Vector3.Normalize(new Vector3(i, j, k));
 
         throw new ParserException("Invalid vertex normal syntax");
     }
@@ -112,17 +112,18 @@ public class ObjParser : IModelParser
         {
             Vertex vertex = new();
             var token = tokens[i].Split('/');
+            var tokenCount = token.Length;
 
             // Parse vertex index
-            if (int.TryParse(token[0], out var vIndex))
+            if (tokenCount >= 1 && int.TryParse(token[0], out var vIndex))
                 vertex.Position = _readPositions[CorrectIndex(vIndex, _readPositions.Count)];
 
             // Parse vertex texture index
-            if (int.TryParse(token[1], out var vtIndex))
+            if (tokenCount >= 2 && int.TryParse(token[1], out var vtIndex))
                 vertex.Texture = _readTextures[CorrectIndex(vtIndex, _readTextures.Count)];
 
             // Parse vertex normal index
-            if (int.TryParse(token[2], out var vnIndex))
+            if (tokenCount >= 3 && int.TryParse(token[2], out var vnIndex))
                 vertex.Normal = _readNormals[CorrectIndex(vnIndex, _readNormals.Count)];
 
             vertices.Add(vertex);

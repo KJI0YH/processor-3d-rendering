@@ -38,6 +38,8 @@ public partial class MainWindow : Window
     private const Key VERTEX_ONLY_DRAW_MODE_KEY = Key.D0;
     private const Key WIRE_DRAW_MODE_KEY = Key.D1;
     private const Key RASTERISATION_DRAW_MODE_KEY = Key.D2;
+    private const Key PHONG_SHADING_DRAW_MODE_KEY = Key.D3;
+    private const Key PHONG_LIGHTING_DRAW_MODE_KEY = Key.D4;
     private const Key CAMERA_RESET_KEY = Key.Home;
     private const Key MOVE_UP_KEY = Key.Up;
     private const Key MOVE_RIGHT_KEY = Key.Right;
@@ -46,7 +48,7 @@ public partial class MainWindow : Window
 
     private readonly OpenFileDialog _openFileDialog;
     private readonly ObjParser _parser = new();
-    private Model? _model = null;
+    private Model? _model;
     private readonly Camera _camera = new();
     private RenderEngine _renderEngine;
     private DrawMode _drawMode = DrawMode.Wire;
@@ -103,7 +105,7 @@ public partial class MainWindow : Window
                     var filename = _openFileDialog.FileName;
                     try
                     {
-                        // Clear backround
+                        // Clear background
                         _renderEngine.FillRenderBuffer(_backgroundColor);
                         _model = _parser.Parse(filename);
                         _model.MoveToWorldCenter();
@@ -119,15 +121,17 @@ public partial class MainWindow : Window
 
                 break;
             case VERTEX_ONLY_DRAW_MODE_KEY:
-                _drawMode = DrawMode.VertexOnly;
+                _renderEngine.DrawMode = DrawMode.VertexOnly;
                 break;
             case WIRE_DRAW_MODE_KEY:
-                _drawMode = DrawMode.Wire;
+                _renderEngine.DrawMode = DrawMode.Wire;
                 _edgeColor = _backgroundColorInvert;
                 break;
             case RASTERISATION_DRAW_MODE_KEY:
-                _drawMode = DrawMode.Rasterisation;
-                _edgeColor = _rasterizedEdgeColor;
+                _renderEngine.DrawMode = DrawMode.Rasterisation;
+                break;
+            case PHONG_SHADING_DRAW_MODE_KEY:
+                _renderEngine.DrawMode = DrawMode.PhongShading;
                 break;
             case INVERT_COLORS_KEY:
                 InvertColors();
@@ -165,8 +169,6 @@ public partial class MainWindow : Window
             case CLOSE_APP_KEY:
                 Application.Current.Shutdown();
                 break;
-            default:
-                break;
         }
 
         DrawModel(_model, _camera);
@@ -184,12 +186,12 @@ public partial class MainWindow : Window
         if (model == null) return;
 
         var start = Environment.TickCount;
-        _renderEngine.DrawModel(model, camera, _backgroundColor, _surfaceColor, _edgeColor, _lightColor, _drawMode);
+        _renderEngine.DrawModel(model, camera, _backgroundColor, _surfaceColor, _edgeColor, _lightColor);
         var stop = Environment.TickCount;
 
         // Show render information
         _renderInfo.RenderTime = stop - start;
-        tbInfo.Text = _renderInfo.GetInfomation(model, camera, _renderEngine.Rasterisation);
+        tbInfo.Text = _renderInfo.GetInformation(_renderEngine, model, camera);
         tbHelp.Text = _renderInfo.GetHelp();
     }
 
@@ -277,9 +279,6 @@ public partial class MainWindow : Window
 
     private void ToggleVisibility(TextBlock textBlock)
     {
-        if (textBlock.Visibility == Visibility.Visible)
-            textBlock.Visibility = Visibility.Hidden;
-        else
-            textBlock.Visibility = Visibility.Visible;
+        textBlock.Visibility = textBlock.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 }
