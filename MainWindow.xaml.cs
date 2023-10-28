@@ -18,33 +18,40 @@ namespace Rendering;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private const Key CLOSE_APP_KEY = Key.Escape;
-    private const Key OPEN_FILE_KEY = Key.O;
-    private const Key INVERT_COLORS_KEY = Key.C;
-    private const Key X_CONTROL_KEY = Key.X;
-    private const Key Y_CONTROL_KEY = Key.Y;
-    private const Key Z_CONTROL_KEY = Key.Z;
-    private const Key FOV_CHANGE_KEY = Key.F;
-    private const Key RASTERISATION_CHANGE_KEY = Key.R;
-    private const Key INFORMATION_TOGGLE_KEY = Key.I;
-    private const Key HELP_TOGGLE_KEY = Key.F1;
-    private const Key SCALE_KEY = Key.S;
-    private const Key MOVE_KEY = Key.LeftShift;
-    private const Key MOVE_STEP_KEY = Key.M;
-    private const Key CONTROL_KEY = Key.LeftCtrl;
-    private const Key NEAR_PLANE_DISTANCE_CHANGE_KEY = Key.N;
-    private const Key FAR_PLANE_DISTANCE_CHANGE_KEY = Key.B;
-    private const Key PLANE_DISTANCE_STEP_KEY = Key.P;
-    private const Key VERTEX_ONLY_DRAW_MODE_KEY = Key.D0;
-    private const Key WIRE_DRAW_MODE_KEY = Key.D1;
-    private const Key RASTERISATION_DRAW_MODE_KEY = Key.D2;
-    private const Key PHONG_SHADING_DRAW_MODE_KEY = Key.D3;
-    private const Key PHONG_LIGHTING_DRAW_MODE_KEY = Key.D4;
-    private const Key CAMERA_RESET_KEY = Key.Home;
-    private const Key MOVE_UP_KEY = Key.Up;
-    private const Key MOVE_RIGHT_KEY = Key.Right;
-    private const Key MOVE_DOWN_KEY = Key.Down;
-    private const Key MOVE_LEFT_KEY = Key.Left;
+    public const Key CLOSE_APP_KEY = Key.Escape;
+    public const Key OPEN_FILE_KEY = Key.O;
+    public const Key INVERT_COLORS_KEY = Key.C;
+    public const Key X_CONTROL_KEY = Key.X;
+    public const Key Y_CONTROL_KEY = Key.Y;
+    public const Key Z_CONTROL_KEY = Key.Z;
+    public const Key FOV_CHANGE_KEY = Key.F;
+    public const Key RASTERISATION_CHANGE_KEY = Key.Q;
+    public const Key INFORMATION_TOGGLE_KEY = Key.I;
+    public const Key HELP_TOGGLE_KEY = Key.F1;
+    public const Key SCALE_KEY = Key.W;
+    public const Key MOVE_KEY = Key.LeftShift;
+    public const Key MOVE_STEP_KEY = Key.M;
+    public const Key CONTROL_KEY = Key.LeftCtrl;
+    public const Key NEAR_PLANE_DISTANCE_CHANGE_KEY = Key.N;
+    public const Key FAR_PLANE_DISTANCE_CHANGE_KEY = Key.J;
+    public const Key PLANE_DISTANCE_STEP_KEY = Key.P;
+    public const Key VERTEX_ONLY_DRAW_MODE_KEY = Key.D0;
+    public const Key WIRE_DRAW_MODE_KEY = Key.D1;
+    public const Key RASTERISATION_DRAW_MODE_KEY = Key.D2;
+    public const Key PHONG_SHADING_DRAW_MODE_KEY = Key.D3;
+    public const Key PHONG_LIGHTING_DRAW_MODE_KEY = Key.D4;
+    public const Key CAMERA_RESET_KEY = Key.Home;
+    public const Key MOVE_UP_KEY = Key.Up;
+    public const Key MOVE_RIGHT_KEY = Key.Right;
+    public const Key MOVE_DOWN_KEY = Key.Down;
+    public const Key MOVE_LEFT_KEY = Key.Left;
+    public const Key RED_CONTROL_KEY = Key.R;
+    public const Key GREEN_CONTROL_KEY = Key.G;
+    public const Key BLUE_CONTROL_KEY = Key.B;
+    public const Key AMBIENT_CONTROL_KEY = Key.A;
+    public const Key DIFFUSE_CONTROL_KEY = Key.D;
+    public const Key SPECULAR_CONTROL_KEY = Key.S;
+    public const Key SHININESS_CONTROL_KEY = Key.H;
 
     private readonly OpenFileDialog _openFileDialog;
     private readonly ObjParser _parser = new();
@@ -59,7 +66,6 @@ public partial class MainWindow : Window
     private static Color _backgroundColorInvert = Colors.White;
     private static Color _surfaceColor = Colors.White;
     private static Color _lightColor = Colors.White;
-    private static Color _rasterizedEdgeColor = Colors.Black;
     private static Color _edgeColor = _backgroundColorInvert;
 
     private int _rasterisationMethodIndex = 0;
@@ -110,6 +116,10 @@ public partial class MainWindow : Window
                         _model = _parser.Parse(filename);
                         _model.MoveToWorldCenter();
                         _camera.SetInitialPosition(_model);
+                        _renderEngine.Background = _backgroundColor;
+                        _renderEngine.Edge = _edgeColor;
+                        _renderEngine.Light = _lightColor;
+                        _renderEngine.Surface = _surfaceColor;
                     }
                     catch (ParserException exception)
                     {
@@ -132,6 +142,9 @@ public partial class MainWindow : Window
                 break;
             case PHONG_SHADING_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.PhongShading;
+                break;
+            case PHONG_LIGHTING_DRAW_MODE_KEY:
+                _renderEngine.DrawMode = DrawMode.PhongLighting;
                 break;
             case INVERT_COLORS_KEY:
                 InvertColors();
@@ -186,7 +199,7 @@ public partial class MainWindow : Window
         if (model == null) return;
 
         var start = Environment.TickCount;
-        _renderEngine.DrawModel(model, camera, _backgroundColor, _surfaceColor, _edgeColor, _lightColor);
+        _renderEngine.DrawModel(model, camera);
         var stop = Environment.TickCount;
 
         // Show render information
@@ -219,42 +232,96 @@ public partial class MainWindow : Window
         if (_model == null) return;
         if (e.Delta < 0)
         {
-            if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition -= _model.MoveStep;
+            if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition -= Model.MOVE_STEP;
             else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY))
-                _model.YPosition -= _model.MoveStep;
+                _model.YPosition -= Model.MOVE_STEP;
             else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY))
-                _model.ZPosition -= _model.MoveStep;
+                _model.ZPosition -= Model.MOVE_STEP;
             else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) _model.XAxisRotate -= Model.MOUSE_ROTATION_DELTA;
             else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) _model.YAxisRotate -= Model.MOUSE_ROTATION_DELTA;
             else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) _model.ZAxisRotate -= Model.MOUSE_ROTATION_DELTA;
             else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) _camera.FOV -= _camera.FovStep;
             else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) _model.DecreaseScaleStep();
-            else if (Keyboard.IsKeyDown(SCALE_KEY)) _model.Scale -= _model.ScaleStep;
-            else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.DecreaseZoomStep();
+            else if (Keyboard.IsKeyDown(SCALE_KEY)) _model.Scale -= Model.SCALE_STEP;
             else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) _model.DecreaseMoveStep();
             else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZNear -= _camera.PlaneDistanceStep;
             else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZFar -= _camera.PlaneDistanceStep;
             else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) _camera.DecreasePlaneDistanceStep();
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kAmbient -= RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kDiffuse -= RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kSpecular -= RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(SHININESS_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kShininess -= RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
+                _renderEngine.Ambient.R -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
+                _renderEngine.Ambient.G -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
+                _renderEngine.Ambient.B -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
+                _renderEngine.Diffuse.R -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
+                _renderEngine.Diffuse.G -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
+                _renderEngine.Diffuse.B -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
+                _renderEngine.Specular.R -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
+                _renderEngine.Specular.G -= RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
+                _renderEngine.Specular.B -= RenderEngine.COLOR_STEP;
+
+
+            else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.DecreaseZoomStep();
             else _camera.ZoomIn();
         }
         else
         {
-            if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition += _model.MoveStep;
+            if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition += Model.MOVE_STEP;
             else if (Keyboard.IsKeyDown(Y_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY))
-                _model.YPosition += _model.MoveStep;
+                _model.YPosition += Model.MOVE_STEP;
             else if (Keyboard.IsKeyDown(Z_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY))
-                _model.ZPosition += _model.MoveStep;
+                _model.ZPosition += Model.MOVE_STEP;
             else if (Keyboard.IsKeyDown(X_CONTROL_KEY)) _model.XAxisRotate += Model.MOUSE_ROTATION_DELTA;
             else if (Keyboard.IsKeyDown(Y_CONTROL_KEY)) _model.YAxisRotate += Model.MOUSE_ROTATION_DELTA;
             else if (Keyboard.IsKeyDown(Z_CONTROL_KEY)) _model.ZAxisRotate += Model.MOUSE_ROTATION_DELTA;
             else if (Keyboard.IsKeyDown(FOV_CHANGE_KEY)) _camera.FOV += _camera.FovStep;
             else if (Keyboard.IsKeyDown(SCALE_KEY) && Keyboard.IsKeyDown(CONTROL_KEY)) _model.IncreaseScaleStep();
-            else if (Keyboard.IsKeyDown(SCALE_KEY)) _model.Scale += _model.ScaleStep;
-            else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.IncreaseZoomStep();
+            else if (Keyboard.IsKeyDown(SCALE_KEY)) _model.Scale += Model.SCALE_STEP;
             else if (Keyboard.IsKeyDown(MOVE_STEP_KEY)) _model.IncreaseMoveStep();
             else if (Keyboard.IsKeyDown(NEAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZNear += _camera.PlaneDistanceStep;
             else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZFar += _camera.PlaneDistanceStep;
             else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) _camera.IncreasePlaneDistanceStep();
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kAmbient += RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kDiffuse += RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kSpecular += RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(SHININESS_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
+                _renderEngine.kShininess += RenderEngine.K_STEP;
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
+                _renderEngine.Ambient.R += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
+                _renderEngine.Ambient.G += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
+                _renderEngine.Ambient.B += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
+                _renderEngine.Diffuse.R += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
+                _renderEngine.Diffuse.G += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
+                _renderEngine.Diffuse.B += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
+                _renderEngine.Specular.R += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
+                _renderEngine.Specular.G += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
+                _renderEngine.Specular.B += RenderEngine.COLOR_STEP;
+            else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.IncreaseZoomStep();
             else _camera.ZoomOut();
         }
 
@@ -264,8 +331,9 @@ public partial class MainWindow : Window
     private void InvertColors()
     {
         (_backgroundColor, _backgroundColorInvert) = (_backgroundColorInvert, _backgroundColor);
+        _renderEngine.Background = _backgroundColor;
 
-        if (_drawMode != DrawMode.Rasterisation) _edgeColor = _backgroundColorInvert;
+        if (_drawMode < DrawMode.Rasterisation) _renderEngine.Edge = _backgroundColorInvert;
 
         Brush textBrush = new SolidColorBrush(_backgroundColorInvert);
         tbInfo.Foreground = textBrush;

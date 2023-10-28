@@ -23,6 +23,21 @@ public class RenderEngine
     public IRasterisation Rasterisation = new Bresenham();
     public DrawMode DrawMode = DrawMode.Rasterisation;
 
+    public Color Light = Colors.White;
+    public Color Background = Colors.Black;
+    public Color Edge = Colors.Black;
+    public Color Surface = Colors.White;
+    public ColorComponent Ambient = new(1, 0, 1);
+    public ColorComponent Diffuse = new(0, 0.5f, 0);
+    public ColorComponent Specular = new(0.5f, 0.5f, 0);
+
+    public float kAmbient = 0.5f;
+    public float kDiffuse = 0.5f;
+    public float kSpecular = 1.0f;
+    public float kShininess = 0.5f;
+    public const float K_STEP = 0.1f;
+    public const float COLOR_STEP = 0.1f;
+
     public RenderEngine(int pixelWidth, int pixelHeight)
     {
         _width = pixelWidth;
@@ -133,17 +148,22 @@ public class RenderEngine
                 color1 = GetPointColor(vertex1.GetNormal(), lightColor, lightPosition, surfaceColor);
                 color2 = GetPointColor(vertex2.GetNormal(), lightColor, lightPosition, surfaceColor);
                 break;
+            case DrawMode.PhongLighting:
+                color0 = vertex0.GetNormal();
+                color1 = vertex1.GetNormal();
+                color2 = vertex2.GetNormal();
+                break;
             default:
                 color0 = color1 = color2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
                 break;
         }
 
         ScanLineTriangle(vertex0.GetViewPort(), vertex1.GetViewPort(), vertex2.GetViewPort(),
-            color0, color1, color2);
+            color0, color1, color2, lightPosition);
     }
 
     private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2,
-        Vector3 color0, Vector3 color1, Vector3 color2)
+        Vector3 color0, Vector3 color1, Vector3 color2, Vector3 lightPosition)
     {
         // Vertex sort
         if (point0.Y > point2.Y)
@@ -195,7 +215,18 @@ public class RenderEngine
                 var right = Math.Min(_width, (int)Math.Ceiling(rightCross.X));
                 for (var x = left; x < right; x++)
                 {
-                    var color = leftColor + (x - leftCross.X) * kColor;
+                    Vector3 color;
+                    switch (DrawMode)
+                    {
+                        case DrawMode.PhongLighting:
+                            var normal = leftColor + (x - leftCross.X) * kColor;
+                            color = GetPointColor(normal, lightPosition, -lightPosition);
+                            break;
+                        default:
+                            color = leftColor + (x - leftCross.X) * kColor;
+                            break;
+                    }
+
                     var zDepth = point0.Z + (x - leftCross.X) * kPoint.Z;
                     if (zDepth < _zBuffer[x, y])
                     {
@@ -212,15 +243,27 @@ public class RenderEngine
         }
     }
 
-    public void DrawModel(Model model, Camera camera, Color background, Color surface, Color edge, Color light)
+    private Vector3 GetPointColor(Vector3 normal, Vector3 light, Vector3 view)
+    {
+        var ambient = kAmbient * Ambient.Normalized;
+        ambient = Vector3.Clamp(ambient, Vector3.Zero, Vector3.One);
+        var diffuse = kDiffuse * MathF.Max(Vector3.Dot(normal, light), 0) * Diffuse.Normalized;
+        diffuse = Vector3.Clamp(diffuse, Vector3.Zero, Vector3.One);
+        var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
+        var specular = kSpecular * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), kShininess) * Specular.Normalized;
+        specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
+        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
+    }
+
+    public void DrawModel(Model model, Camera camera)
     {
         // Fill background
-        FillRenderBuffer(background);
+        FillRenderBuffer(Background);
         ResetZBuffer();
 
-        var surfaceColor = NormalizeColor(surface);
-        var edgeColor = NormalizeColor(edge);
-        var lightColor = NormalizeColor(light);
+        var surfaceColor = NormalizeColor(Surface);
+        var edgeColor = NormalizeColor(Edge);
+        var lightColor = NormalizeColor(Light);
         var lightPosition = Vector3.Normalize(camera.Position);
 
         // Projection of each vertex of the model
