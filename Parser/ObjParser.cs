@@ -4,6 +4,7 @@ using Rendering.Objects;
 using Rendering.Primitives;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 
 namespace Rendering.Parser;
@@ -11,7 +12,7 @@ namespace Rendering.Parser;
 public class ObjParser : IModelParser
 {
     private readonly List<Position> _readPositions = new();
-    private readonly List<Vector3> _readNormals = new();
+    private readonly List<Normal> _readNormals = new();
     private readonly List<Vector3> _readTextures = new();
     private readonly List<Polygon> _readPolygons = new();
 
@@ -59,6 +60,7 @@ public class ObjParser : IModelParser
                 $"Error in line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
         }
 
+        SetVertexNormals();
         Model model = new(_readPositions, _readNormals, _readPolygons);
         if (model.IsEmpty()) throw new ParserException($"File does not contain a model in obj format");
         return model;
@@ -91,14 +93,14 @@ public class ObjParser : IModelParser
         return new Vector3(values[0], values[1], values[2]);
     }
 
-    private static Vector3 ParseNormal(string[] tokens)
+    private static Normal ParseNormal(string[] tokens)
     {
         if (tokens.Length != 4) throw new ParserException("Invalid vertex normal syntax");
 
         if (float.TryParse(tokens[1], out var i) &&
             float.TryParse(tokens[2], out var j) &&
             float.TryParse(tokens[3], out var k))
-            return Vector3.Normalize(new Vector3(i, j, k));
+            return new Normal(Vector4.Normalize(new Vector4(i, j, k, 0)));
 
         throw new ParserException("Invalid vertex normal syntax");
     }
@@ -150,5 +152,39 @@ public class ObjParser : IModelParser
         if (index < 0)
             return index + maxLength;
         return --index;
+    }
+
+    private void SetVertexNormals()
+    {
+        Vector4 empty = new(0, 0, 0, 0);
+        var verticesWithoutNormal = _readPolygons
+            .SelectMany(polygon => polygon.Vertices)
+            .Where(vertex => vertex.Normal.Original.Equals(empty))
+            .Distinct()
+            .ToList();
+
+        foreach (var vertex in verticesWithoutNormal)
+        {
+            var polygons = _readPolygons
+                .Where(polygon => polygon.Vertices.Contains(vertex))
+                .ToList();
+
+            Vector3 approximatedNormal = new(0, 0, 0);
+            approximatedNormal = polygons.Aggregate(approximatedNormal, (current, polygon) => current + polygon.Normal);
+            approximatedNormal /= polygons.Count;
+            var normal = new Normal(new Vector4(approximatedNormal, 0));
+            _readNormals.Add(normal);
+
+            foreach (var polygon in polygons)
+            {
+                var index = polygon.Vertices.IndexOf(vertex);
+                if (index != -1)
+                {
+                    var newVertex = vertex;
+                    newVertex.Normal = normal;
+                    polygon.Vertices[index] = newVertex;
+                }
+            }
+        }
     }
 }

@@ -9,7 +9,7 @@ namespace Rendering.Objects;
 public class Model
 {
     public readonly List<Position> Positions;
-    public readonly List<Vector3> Normals;
+    public readonly List<Normal> Normals;
     public readonly List<Polygon> Polygons;
 
     private float _xAxisRotate;
@@ -110,7 +110,7 @@ public class Model
         }
     }
 
-    public Model(List<Position> positions, List<Vector3> normals, List<Polygon> polygons)
+    public Model(List<Position> positions, List<Normal> normals, List<Polygon> polygons)
     {
         Positions = positions;
         Normals = normals;

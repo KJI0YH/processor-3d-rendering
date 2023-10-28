@@ -124,29 +124,22 @@ public class RenderEngine
         var vertex1 = polygon.Vertices[1];
         var vertex2 = polygon.Vertices[2];
 
-        var viewPort0 = vertex0.Position.ViewPort;
-        var viewPort1 = vertex1.Position.ViewPort;
-        var viewPort2 = vertex2.Position.ViewPort;
-
-        var point0 = new Vector3(viewPort0.X, viewPort0.Y, viewPort0.Z);
-        var point1 = new Vector3(viewPort1.X, viewPort1.Y, viewPort1.Z);
-        var point2 = new Vector3(viewPort2.X, viewPort2.Y, viewPort2.Z);
-
         Vector3 color0, color1, color2;
 
         switch (DrawMode)
         {
             case DrawMode.PhongShading:
-                color0 = GetPointColor(vertex0.Normal, lightColor, lightPosition, surfaceColor);
-                color1 = GetPointColor(vertex1.Normal, lightColor, lightPosition, surfaceColor);
-                color2 = GetPointColor(vertex2.Normal, lightColor, lightPosition, surfaceColor);
+                color0 = GetPointColor(vertex0.GetNormal(), lightColor, lightPosition, surfaceColor);
+                color1 = GetPointColor(vertex1.GetNormal(), lightColor, lightPosition, surfaceColor);
+                color2 = GetPointColor(vertex2.GetNormal(), lightColor, lightPosition, surfaceColor);
                 break;
             default:
                 color0 = color1 = color2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
                 break;
         }
 
-        ScanLineTriangle(point0, point1, point2, color0, color1, color2);
+        ScanLineTriangle(vertex0.GetViewPort(), vertex1.GetViewPort(), vertex2.GetViewPort(),
+            color0, color1, color2);
     }
 
     private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2,
@@ -239,6 +232,10 @@ public class RenderEngine
             vertex.Perspective = vertex.Projected / vertex.Projected.W;
             vertex.ViewPort = Vector4.Transform(vertex.Perspective, camera.ViewPort);
         }
+
+        // Transform each vertex normal of the model
+        foreach (var normal in model.Normals)
+            normal.Transform = Vector4.Transform(normal.Original, model.Transformation);
 
         // Drawing of each visible object
         foreach (var polygon in model.Polygons)

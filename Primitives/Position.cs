@@ -14,5 +14,6 @@ public class Position
     public Position(Vector4 original)
     {
         Original = original;
+        Transform = original;
     }
 }
