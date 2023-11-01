@@ -21,7 +21,7 @@ public class RenderEngine
     public readonly WriteableBitmap RenderBuffer;
 
     public IRasterisation Rasterisation = new Bresenham();
-    public DrawMode DrawMode = DrawMode.Rasterisation;
+    public DrawMode DrawMode = DrawMode.PhongLighting;
 
     public Color Light = Colors.White;
     public Color Background = Colors.Black;
@@ -81,21 +81,6 @@ public class RenderEngine
         }
     }
 
-    private void DrawPixel(float x, float y, Vector3 color)
-    {
-        try
-        {
-            // Reserve the back buffer for updates
-            RenderBuffer.Lock();
-            SetPixelData((int)MathF.Round(x), (int)MathF.Round(y), GetColorData(color));
-        }
-        finally
-        {
-            // Release the back buffer and make it available for display
-            RenderBuffer.Unlock();
-        }
-    }
-
     private void SetPixelData(int x, int y, int colorData)
     {
         unsafe
@@ -115,7 +100,22 @@ public class RenderEngine
         RenderBuffer.AddDirtyRect(new Int32Rect(x, y, 1, 1));
     }
 
-    private int GetColorData(Vector3 color)
+    private void DrawPixel(float x, float y, Vector3 color)
+    {
+        try
+        {
+            // Reserve the back buffer for updates
+            RenderBuffer.Lock();
+            SetPixelData((int)MathF.Round(x), (int)MathF.Round(y), GetColorData(color));
+        }
+        finally
+        {
+            // Release the back buffer and make it available for display
+            RenderBuffer.Unlock();
+        }
+    }
+
+    private static int GetColorData(Vector3 color)
     {
         var colorData = (int)(255 * color.X) << 16;
         colorData |= (int)(255 * color.Y) << 8;
@@ -123,7 +123,8 @@ public class RenderEngine
         return colorData;
     }
 
-    private Vector3 GetPointColor(Vector3 normal, Vector3 lightColor, Vector3 lightPosition, Vector3 surfaceColor)
+    private static Vector3 GetPointColor(Vector3 normal, Vector3 lightColor, Vector3 lightPosition,
+        Vector3 surfaceColor)
     {
         var intensity = Math.Max(Vector3.Dot(lightPosition, normal), 0);
         return new Vector3(
@@ -139,57 +140,57 @@ public class RenderEngine
         var vertex1 = polygon.Vertices[1];
         var vertex2 = polygon.Vertices[2];
 
-        Vector3 color0, color1, color2;
+        Vector3 value0, value1, value2;
 
         switch (DrawMode)
         {
             case DrawMode.PhongShading:
-                color0 = GetPointColor(vertex0.GetNormal(), lightColor, lightPosition, surfaceColor);
-                color1 = GetPointColor(vertex1.GetNormal(), lightColor, lightPosition, surfaceColor);
-                color2 = GetPointColor(vertex2.GetNormal(), lightColor, lightPosition, surfaceColor);
+                value0 = GetPointColor(vertex0.GetNormal(), lightColor, lightPosition, surfaceColor);
+                value1 = GetPointColor(vertex1.GetNormal(), lightColor, lightPosition, surfaceColor);
+                value2 = GetPointColor(vertex2.GetNormal(), lightColor, lightPosition, surfaceColor);
                 break;
             case DrawMode.PhongLighting:
-                color0 = vertex0.GetNormal();
-                color1 = vertex1.GetNormal();
-                color2 = vertex2.GetNormal();
+                value0 = vertex0.GetNormal();
+                value1 = vertex1.GetNormal();
+                value2 = vertex2.GetNormal();
                 break;
             default:
-                color0 = color1 = color2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
+                value0 = value1 = value2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
                 break;
         }
 
         ScanLineTriangle(vertex0.GetViewPort(), vertex1.GetViewPort(), vertex2.GetViewPort(),
-            color0, color1, color2, lightPosition);
+            value0, value1, value2, lightPosition);
     }
 
     private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2,
-        Vector3 color0, Vector3 color1, Vector3 color2, Vector3 lightPosition)
+        Vector3 value0, Vector3 value1, Vector3 value2, Vector3 lightPosition)
     {
         // Vertex sort
         if (point0.Y > point2.Y)
         {
             (point0, point2) = (point2, point0);
-            (color0, color2) = (color2, color0);
+            (value0, value2) = (value2, value0);
         }
 
         if (point0.Y > point1.Y)
         {
             (point0, point1) = (point1, point0);
-            (color0, color1) = (color1, color0);
+            (value0, value1) = (value1, value0);
         }
 
         if (point1.Y > point2.Y)
         {
             (point1, point2) = (point2, point1);
-            (color1, color2) = (color2, color1);
+            (value1, value2) = (value2, value1);
         }
 
         var kPoint0 = (point2 - point0) / (point2.Y - point0.Y);
         var kPoint1 = (point1 - point0) / (point1.Y - point0.Y);
         var kPoint2 = (point2 - point1) / (point2.Y - point1.Y);
-        var kColor0 = (color2 - color0) / (point2.Y - point0.Y);
-        var kColor1 = (color1 - color0) / (point1.Y - point0.Y);
-        var kColor2 = (color2 - color1) / (point2.Y - point1.Y);
+        var kColor0 = (value2 - value0) / (point2.Y - point0.Y);
+        var kColor1 = (value1 - value0) / (point1.Y - point0.Y);
+        var kColor2 = (value2 - value1) / (point2.Y - point1.Y);
         var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
         var bottom = Math.Min(_height, (int)Math.Ceiling(point2.Y));
         try
@@ -200,9 +201,9 @@ public class RenderEngine
             for (var y = top; y < bottom; y++)
             {
                 var leftCross = point0 + (y - point0.Y) * kPoint0;
-                var leftColor = color0 + (y - point0.Y) * kColor0;
+                var leftColor = value0 + (y - point0.Y) * kColor0;
                 var rightCross = y < point1.Y ? point0 + (y - point0.Y) * kPoint1 : point1 + (y - point1.Y) * kPoint2;
-                var rightColor = y < point1.Y ? color0 + (y - point0.Y) * kColor1 : color1 + (y - point1.Y) * kColor2;
+                var rightColor = y < point1.Y ? value0 + (y - point0.Y) * kColor1 : value1 + (y - point1.Y) * kColor2;
                 if (leftCross.X > rightCross.X)
                 {
                     (leftCross, rightCross) = (rightCross, leftCross);
@@ -220,7 +221,7 @@ public class RenderEngine
                     {
                         case DrawMode.PhongLighting:
                             var normal = leftColor + (x - leftCross.X) * kColor;
-                            color = GetPointColor(normal, lightPosition, -lightPosition);
+                            color = GetPhongColor(normal, lightPosition, -lightPosition);
                             break;
                         default:
                             color = leftColor + (x - leftCross.X) * kColor;
@@ -243,7 +244,7 @@ public class RenderEngine
         }
     }
 
-    private Vector3 GetPointColor(Vector3 normal, Vector3 light, Vector3 view)
+    private Vector3 GetPhongColor(Vector3 normal, Vector3 light, Vector3 view)
     {
         var ambient = kAmbient * Ambient.Normalized;
         ambient = Vector3.Clamp(ambient, Vector3.Zero, Vector3.One);
@@ -266,19 +267,7 @@ public class RenderEngine
         var lightColor = NormalizeColor(Light);
         var lightPosition = Vector3.Normalize(camera.Position);
 
-        // Projection of each vertex of the model
-        foreach (var vertex in model.Positions)
-        {
-            vertex.Transform = Vector4.Transform(vertex.Original, model.Transformation);
-            vertex.CameraView = Vector4.Transform(vertex.Transform, camera.View);
-            vertex.Projected = Vector4.Transform(vertex.CameraView, camera.Projection);
-            vertex.Perspective = vertex.Projected / vertex.Projected.W;
-            vertex.ViewPort = Vector4.Transform(vertex.Perspective, camera.ViewPort);
-        }
-
-        // Transform each vertex normal of the model
-        foreach (var normal in model.Normals)
-            normal.Transform = Vector4.Transform(normal.Original, model.Transformation);
+        model.Update(camera);
 
         // Drawing of each visible object
         foreach (var polygon in model.Polygons)
@@ -291,39 +280,56 @@ public class RenderEngine
             {
                 // Draw only visible vertices
                 case DrawMode.VertexOnly:
-                    if (IsVertexVisible(vertex0.Perspective))
-                        DrawPixel(vertex0.ViewPort.X, vertex0.ViewPort.Y, edgeColor);
-                    if (IsVertexVisible(vertex1.Perspective))
-                        DrawPixel(vertex1.ViewPort.X, vertex1.ViewPort.Y, edgeColor);
-                    if (IsVertexVisible(vertex2.Perspective))
-                        DrawPixel(vertex2.ViewPort.X, vertex2.ViewPort.Y, edgeColor);
+                    DrawVertexOnly(vertex0, vertex1, vertex2, edgeColor);
                     break;
 
                 // Draw only visible lines
                 case DrawMode.Wire:
-                    var v0 = new Vector2(vertex0.ViewPort.X, vertex0.ViewPort.Y);
-                    var v1 = new Vector2(vertex1.ViewPort.X, vertex1.ViewPort.Y);
-                    var v2 = new Vector2(vertex2.ViewPort.X, vertex2.ViewPort.Y);
-                    if (IsVertexVisible(vertex0.Perspective) && IsVertexVisible(vertex1.Perspective))
-                        DrawLine(v0, v1, edgeColor);
-                    if (IsVertexVisible(vertex0.Perspective) && IsVertexVisible(vertex2.Perspective))
-                        DrawLine(v0, v2, edgeColor);
-                    if (IsVertexVisible(vertex1.Perspective) && IsVertexVisible(vertex2.Perspective))
-                        DrawLine(v1, v2, edgeColor);
+                    DrawWire(vertex0, vertex1, vertex2, edgeColor);
                     break;
 
                 // Draw only visible rasterizer polygons
                 case DrawMode.Rasterisation:
                 case DrawMode.PhongShading:
                 case DrawMode.PhongLighting:
-                    if (IsPolygonVisible(polygon, camera.Position))
-                        if (IsVertexVisible(vertex0.Perspective) &&
-                            IsVertexVisible(vertex1.Perspective) &&
-                            IsVertexVisible(vertex2.Perspective))
-                            DrawPolygon(polygon, lightColor, lightPosition, surfaceColor);
+                default:
+                    DrawRasterisation(polygon, camera, lightColor, lightPosition, surfaceColor);
                     break;
             }
         }
+    }
+
+    private void DrawVertexOnly(Position vertex0, Position vertex1, Position vertex2, Vector3 color)
+    {
+        if (IsVertexVisible(vertex0.Perspective))
+            DrawPixel(vertex0.ViewPort.X, vertex0.ViewPort.Y, color);
+        if (IsVertexVisible(vertex1.Perspective))
+            DrawPixel(vertex1.ViewPort.X, vertex1.ViewPort.Y, color);
+        if (IsVertexVisible(vertex2.Perspective))
+            DrawPixel(vertex2.ViewPort.X, vertex2.ViewPort.Y, color);
+    }
+
+    private void DrawWire(Position vertex0, Position vertex1, Position vertex2, Vector3 color)
+    {
+        var v0 = new Vector2(vertex0.ViewPort.X, vertex0.ViewPort.Y);
+        var v1 = new Vector2(vertex1.ViewPort.X, vertex1.ViewPort.Y);
+        var v2 = new Vector2(vertex2.ViewPort.X, vertex2.ViewPort.Y);
+        if (IsVertexVisible(vertex0.Perspective) && IsVertexVisible(vertex1.Perspective))
+            DrawLine(v0, v1, color);
+        if (IsVertexVisible(vertex0.Perspective) && IsVertexVisible(vertex2.Perspective))
+            DrawLine(v0, v2, color);
+        if (IsVertexVisible(vertex1.Perspective) && IsVertexVisible(vertex2.Perspective))
+            DrawLine(v1, v2, color);
+    }
+
+    private void DrawRasterisation(Polygon polygon, Camera camera, Vector3 lightColor, Vector3 lightPosition,
+        Vector3 surfaceColor)
+    {
+        if (!IsPolygonVisible(polygon, camera.Position)) return;
+        if (IsVertexVisible(polygon.Vertices[0].Position.Perspective) &&
+            IsVertexVisible(polygon.Vertices[1].Position.Perspective) &&
+            IsVertexVisible(polygon.Vertices[2].Position.Perspective))
+            DrawPolygon(polygon, lightColor, lightPosition, surfaceColor);
     }
 
     private static bool IsVertexVisible(Vector4 perspectiveVertex)

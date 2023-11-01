@@ -12,9 +12,11 @@ namespace Rendering.Information;
 public class RenderInfo
 {
     public int RenderTime = 0;
+    public readonly string HelpInfo;
 
     public RenderInfo()
     {
+        HelpInfo = GetHelp();
     }
 
     public string GetInformation(RenderEngine renderEngine, Model model, Camera camera)
@@ -61,22 +63,39 @@ public class RenderInfo
             .AppendLine($"To close the application: {MainWindow.CLOSE_APP_KEY}")
             .AppendLine($"To open a file: {MainWindow.OPEN_FILE_KEY}")
             .AppendLine($"For model rotation: Mouse Drag or Key Arrows")
-            .AppendLine($"To zoom in|out of the camera: Mouse Wheel")
+            .AppendLine($"To zoom (in|out) of the camera: Mouse Wheel")
             .AppendLine($"To change the zoom step of the camera: {MainWindow.CONTROL_KEY} + MouseWheel")
             .AppendLine($"For rotation around the X axis: {MainWindow.X_CONTROL_KEY} + Mouse Wheel")
             .AppendLine($"For rotation around the Y axis: {MainWindow.Y_CONTROL_KEY} + Mouse Wheel")
             .AppendLine($"For rotation around the Z axis: {MainWindow.Z_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For X axis movement: {MainWindow.X_CONTROL_KEY} + {MainWindow.MOVE_KEY} + Mouse Wheel")
-            .AppendLine($"For Y axis movement: {MainWindow.Y_CONTROL_KEY} + {MainWindow.MOVE_KEY} + Mouse Wheel")
-            .AppendLine($"For Z axis movement: {MainWindow.Z_CONTROL_KEY} + {MainWindow.MOVE_KEY} + Mouse Wheel")
+            .AppendLine($"For X axis movement: {MainWindow.MOVE_KEY} + {MainWindow.X_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For Y axis movement: {MainWindow.MOVE_KEY} + {MainWindow.Y_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For Z axis movement: {MainWindow.MOVE_KEY} + {MainWindow.Z_CONTROL_KEY} + Mouse Wheel")
             .AppendLine($"For change move step of the model: {MainWindow.MOVE_STEP_KEY} + Mouse Wheel")
             .AppendLine($"For scaling model: {MainWindow.SCALE_KEY} + Mouse Wheel")
-            .AppendLine($"For change scaling step of the model: {MainWindow.SCALE_KEY} + " +
-                        $"{MainWindow.CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For change scaling step of the model: {MainWindow.CONTROL_KEY} + " +
+                        $"{MainWindow.SCALE_KEY} + Mouse Wheel")
             .AppendLine($"To change the FOV: {MainWindow.FOV_CHANGE_KEY} + Mouse Wheel")
             .AppendLine($"To change near plane distance: {MainWindow.NEAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
             .AppendLine($"To change far plane distance: {MainWindow.FAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
             .AppendLine($"To change plane distance step: {MainWindow.PLANE_DISTANCE_STEP_KEY} + Mouse Wheel")
+            .AppendLine($"To change Ambient coefficient: {MainWindow.CONTROL_KEY} + " +
+                        $"{MainWindow.AMBIENT_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Diffuse coefficient: {MainWindow.CONTROL_KEY} + " +
+                        $"{MainWindow.DIFFUSE_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Specular coefficient: {MainWindow.CONTROL_KEY} + " +
+                        $"{MainWindow.SPECULAR_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Shininess coefficient: {MainWindow.CONTROL_KEY} + " +
+                        $"{MainWindow.SHININESS_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Ambient color components: {MainWindow.AMBIENT_CONTROL_KEY} + " +
+                        $"({MainWindow.RED_CONTROL_KEY} | {MainWindow.GREEN_CONTROL_KEY} | {MainWindow.BLUE_CONTROL_KEY})" +
+                        $" + Mouse Wheel")
+            .AppendLine($"To change Diffuse color components: {MainWindow.DIFFUSE_CONTROL_KEY} + " +
+                        $"({MainWindow.RED_CONTROL_KEY} | {MainWindow.GREEN_CONTROL_KEY} | {MainWindow.BLUE_CONTROL_KEY})" +
+                        $" + Mouse Wheel")
+            .AppendLine($"To change Specular color components: {MainWindow.SPECULAR_CONTROL_KEY} + " +
+                        $"({MainWindow.RED_CONTROL_KEY} | {MainWindow.GREEN_CONTROL_KEY} | {MainWindow.BLUE_CONTROL_KEY})" +
+                        $" + Mouse Wheel")
             .AppendLine($"To invert colors: {MainWindow.INVERT_COLORS_KEY}")
             .AppendLine($"To set the camera to the initial position: {MainWindow.CAMERA_RESET_KEY}")
             .AppendLine($"To change the rasterisation algorithm: {MainWindow.RASTERISATION_CHANGE_KEY}")

@@ -58,7 +58,6 @@ public partial class MainWindow : Window
     private Model? _model;
     private readonly Camera _camera = new();
     private RenderEngine _renderEngine;
-    private DrawMode _drawMode = DrawMode.Wire;
     private readonly RenderInfo _renderInfo = new();
 
     private Point _mouseClickPosition;
@@ -70,7 +69,7 @@ public partial class MainWindow : Window
 
     private int _rasterisationMethodIndex = 0;
 
-    private readonly IRasterisation[] _rasterisationMethods = new IRasterisation[]
+    private readonly IRasterisation[] _rasterisationMethods =
     {
         new Bresenham(),
         new DDALine()
@@ -85,7 +84,7 @@ public partial class MainWindow : Window
         };
         tbInfo.Foreground = new SolidColorBrush(_surfaceColor);
         tbHelp.Foreground = new SolidColorBrush(_surfaceColor);
-        tbHelp.Text = _renderInfo.GetHelp();
+        tbHelp.Text = _renderInfo.HelpInfo;
     }
 
     private void Window_ContentRendered(object sender, EventArgs e)
@@ -165,7 +164,7 @@ public partial class MainWindow : Window
                 break;
             case HELP_TOGGLE_KEY:
                 ToggleVisibility(tbHelp);
-                tbHelp.Text = _renderInfo.GetHelp();
+                tbHelp.Text = _renderInfo.HelpInfo;
                 break;
             case MOVE_UP_KEY:
                 _camera.ZenithAngle -= _camera.KeyRotation;
@@ -205,7 +204,7 @@ public partial class MainWindow : Window
         // Show render information
         _renderInfo.RenderTime = stop - start;
         tbInfo.Text = _renderInfo.GetInformation(_renderEngine, model, camera);
-        tbHelp.Text = _renderInfo.GetHelp();
+        tbHelp.Text = _renderInfo.HelpInfo;
     }
 
     private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -333,7 +332,7 @@ public partial class MainWindow : Window
         (_backgroundColor, _backgroundColorInvert) = (_backgroundColorInvert, _backgroundColor);
         _renderEngine.Background = _backgroundColor;
 
-        if (_drawMode < DrawMode.Rasterisation) _renderEngine.Edge = _backgroundColorInvert;
+        if (_renderEngine.DrawMode < DrawMode.Rasterisation) _renderEngine.Edge = _backgroundColorInvert;
 
         Brush textBrush = new SolidColorBrush(_backgroundColorInvert);
         tbInfo.Foreground = textBrush;

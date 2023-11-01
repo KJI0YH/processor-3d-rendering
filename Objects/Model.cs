@@ -190,4 +190,21 @@ public class Model
         ZAxisRotate = 0;
         MoveToWorldCenter();
     }
+
+    public void Update(Camera camera)
+    {
+        // Projection of each vertex of the model
+        foreach (var vertex in Positions)
+        {
+            vertex.Transform = Vector4.Transform(vertex.Original, Transformation);
+            vertex.CameraView = Vector4.Transform(vertex.Transform, camera.View);
+            vertex.Projected = Vector4.Transform(vertex.CameraView, camera.Projection);
+            vertex.Perspective = vertex.Projected / vertex.Projected.W;
+            vertex.ViewPort = Vector4.Transform(vertex.Perspective, camera.ViewPort);
+        }
+
+        // Transform each vertex normal of the model
+        foreach (var normal in Normals)
+            normal.Transform = Vector4.Transform(normal.Original, Transformation);
+    }
 }
