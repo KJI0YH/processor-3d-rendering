@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text.RegularExpressions;
 
 namespace Rendering.Parser;
 
@@ -36,6 +37,7 @@ public class ObjParser : IModelParser
             while ((line = streamReader?.ReadLine()) != null)
             {
                 lineCount++;
+                line = Regex.Replace(line, @"\s{2,}", " ");
                 var tokens = line.Trim().Replace('.', ',').Split(' ');
                 switch (tokens[0])
                 {
