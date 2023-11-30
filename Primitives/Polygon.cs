@@ -11,12 +11,14 @@ public class Polygon
 {
     public List<Vertex> Vertices { get; } = new();
     public Vector3 Normal => GetNormal();
+    public readonly Material? Material;
 
-    public Polygon(IReadOnlyCollection<Vertex> vertices)
+    public Polygon(IReadOnlyCollection<Vertex> vertices, Material? material)
     {
         if (vertices.Count < 3) throw new InvalidPolygonException("Vertices count less than 3");
 
         Vertices.AddRange(vertices);
+        Material = material;
     }
 
     public IEnumerable<Polygon> Triangulate()
@@ -60,7 +62,7 @@ public class Polygon
                 Vertices[indEar],
                 Vertices[indEarRight],
                 Vertices[indEarLeft]
-            });
+            }, Material);
             triangles.Add(polygon);
 
             // Delete vertex from main polygon

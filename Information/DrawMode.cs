@@ -8,5 +8,6 @@ public enum DrawMode
     [Description("Wire")] Wire,
     [Description("Rasterisation")] Rasterisation,
     [Description("Phong shading")] PhongShading,
-    [Description("Phong lighting")] PhongLighting
+    [Description("Phong lighting")] PhongLighting,
+    [Description("Texture")] Texture
 }

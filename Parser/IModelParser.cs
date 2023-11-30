@@ -1,9 +1,8 @@
 ﻿using Rendering.Objects;
 
-namespace Rendering.Parser
+namespace Rendering.Parser;
+
+public interface IModelParser
 {
-    public interface IModelParser
-    {
-        public Model Parse(string filename);
-    }
+    public Model Parse(string filePath);
 }

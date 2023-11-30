@@ -9,8 +9,8 @@ namespace Rendering.Objects;
 public class Model
 {
     public readonly List<Position> Positions;
-    public readonly List<Normal> Normals;
     public readonly List<Polygon> Polygons;
+    public readonly List<Normal> Normals;
 
     private float _xAxisRotate;
     private float _yAxisRotate;

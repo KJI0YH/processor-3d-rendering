@@ -3,6 +3,7 @@ using Rendering.Exceptions;
 using Rendering.Objects;
 using Rendering.Primitives;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -16,6 +17,10 @@ public class ObjParser : IModelParser
     private readonly List<Normal> _readNormals = new();
     private readonly List<Vector3> _readTextures = new();
     private readonly List<Polygon> _readPolygons = new();
+    private readonly List<Material> _readMaterials = new();
+    private readonly MtlParser _mtlParser = new();
+    private string? _currentDirectory;
+    private Material? _currentMaterial;
 
     private void InitParser()
     {
@@ -25,10 +30,11 @@ public class ObjParser : IModelParser
         _readPolygons.Clear();
     }
 
-    public Model Parse(string filename)
+    public Model Parse(string filePath)
     {
+        _currentDirectory = Path.GetDirectoryName(filePath);
         InitParser();
-        var fileStream = new FileStream(filename, FileMode.Open, FileAccess.Read);
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
         using var streamReader = new StreamReader(fileStream);
         var line = string.Empty;
         var lineCount = 0;
@@ -38,7 +44,7 @@ public class ObjParser : IModelParser
             {
                 lineCount++;
                 line = Regex.Replace(line, @"\s{2,}", " ");
-                var tokens = line.Trim().Replace('.', ',').Split(' ');
+                var tokens = line.Trim().Split(' ');
                 switch (tokens[0])
                 {
                     case "v":
@@ -53,13 +59,19 @@ public class ObjParser : IModelParser
                     case "f":
                         _readPolygons.AddRange(ParsePolygon(tokens));
                         break;
+                    case "mtllib":
+                        _readMaterials.AddRange(ParseMaterials(tokens));
+                        break;
+                    case "usemtl":
+                        _currentMaterial = ParseMaterial(tokens);
+                        break;
                 }
             }
         }
         catch (ParserException exception)
         {
             throw new ParserException(
-                $"Error in line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
+                $"Error in file: {filePath}\r\nin line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
         }
 
         SetVertexNormals();
@@ -68,15 +80,14 @@ public class ObjParser : IModelParser
         return model;
     }
 
-
-    private static Position ParsePosition(string[] tokens)
+    private Position ParsePosition(string[] tokens)
     {
         if (tokens.Length >= 4)
-            if (float.TryParse(tokens[1], out var x) &&
-                float.TryParse(tokens[2], out var y) &&
-                float.TryParse(tokens[3], out var z))
+            if (ToFloat(tokens[1], out var x) &&
+                ToFloat(tokens[2], out var y) &&
+                ToFloat(tokens[3], out var z))
             {
-                if (tokens.Length == 5 && float.TryParse(tokens[4], out var w))
+                if (tokens.Length == 5 && ToFloat(tokens[4], out var w))
                     return new Position(new Vector4(x, y, z, w));
                 return new Position(new Vector4(x, y, z, 1));
             }
@@ -84,24 +95,24 @@ public class ObjParser : IModelParser
         throw new ParserException("Invalid vertex syntax");
     }
 
-    private static Vector3 ParseTexture(string[] tokens)
+    private Vector3 ParseTexture(string[] tokens)
     {
         var values = new float[3];
         var length = Math.Min(3, tokens.Length - 1);
         if (length == 0) throw new ParserException("Invalid vertex texture syntax");
         for (var index = 0; index < length; index++)
-            if (!float.TryParse(tokens[index + 1], out values[index]))
+            if (!ToFloat(tokens[index + 1], out values[index]))
                 throw new ParserException("Invalid vertex texture syntax");
         return new Vector3(values[0], values[1], values[2]);
     }
 
-    private static Normal ParseNormal(string[] tokens)
+    private Normal ParseNormal(string[] tokens)
     {
         if (tokens.Length != 4) throw new ParserException("Invalid vertex normal syntax");
 
-        if (float.TryParse(tokens[1], out var i) &&
-            float.TryParse(tokens[2], out var j) &&
-            float.TryParse(tokens[3], out var k))
+        if (ToFloat(tokens[1], out var i) &&
+            ToFloat(tokens[2], out var j) &&
+            ToFloat(tokens[3], out var k))
             return new Normal(Vector4.Normalize(new Vector4(i, j, k, 0)));
 
         throw new ParserException("Invalid vertex normal syntax");
@@ -135,7 +146,7 @@ public class ObjParser : IModelParser
 
         try
         {
-            var polygon = new Polygon(vertices);
+            var polygon = new Polygon(vertices, _currentMaterial);
             if (polygon.CanTriangulate())
                 return polygon.Triangulate();
             return new List<Polygon>()
@@ -149,7 +160,7 @@ public class ObjParser : IModelParser
         }
     }
 
-    private static int CorrectIndex(int index, int maxLength)
+    private int CorrectIndex(int index, int maxLength)
     {
         if (index < 0)
             return index + maxLength;
@@ -188,5 +199,26 @@ public class ObjParser : IModelParser
                 }
             }
         }
+    }
+
+    private List<Material> ParseMaterials(string[] tokens)
+    {
+        if (tokens.Length < 2) throw new ParserException("Invalid mtllib syntax");
+        if (_currentDirectory == null) throw new ParserException("Invalid directory path");
+        return _mtlParser.Parse(Path.Combine(_currentDirectory, tokens[1]));
+    }
+
+    private Material ParseMaterial(string[] tokens)
+    {
+        if (tokens.Length < 2) throw new ParserException("Invalid usemtl syntax");
+        var materialName = tokens[1];
+        var material = _readMaterials.Find(m => m.Name == materialName);
+        if (material == null) throw new ParserException($"Material with name {materialName} does not exists");
+        return material;
+    }
+
+    private bool ToFloat(string value, out float result)
+    {
+        return float.TryParse(value, CultureInfo.InvariantCulture, out result);
     }
 }
