@@ -331,8 +331,7 @@ public partial class MainWindow : Window
     {
         (_backgroundColor, _backgroundColorInvert) = (_backgroundColorInvert, _backgroundColor);
         _renderEngine.Background = _backgroundColor;
-
-        if (_renderEngine.DrawMode < DrawMode.Rasterisation) _renderEngine.Edge = _backgroundColorInvert;
+        _renderEngine.Edge = _backgroundColorInvert;
 
         Brush textBrush = new SolidColorBrush(_backgroundColorInvert);
         tbInfo.Foreground = textBrush;
