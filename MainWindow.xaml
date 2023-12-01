@@ -4,14 +4,54 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" WindowState="Maximized" WindowStyle="None" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged" ContentRendered="Window_ContentRendered" MouseMove="Window_MouseMove" MouseWheel="Window_MouseWheel" Cursor="Cross" MouseLeftButtonDown="Window_MouseLeftButtonDown" FontFamily="Courier New">
+        Title="MainWindow"
+        Height="450"
+        Width="800"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        WindowStyle="None"
+        FontFamily="Courier New"
+        Cursor="Cross"
+        ContentRendered="Window_ContentRendered"
+        SizeChanged="Window_SizeChanged"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewKeyUp="Window_PreviewKeyUp"
+        MouseMove="Window_MouseMove"
+        MouseWheel="Window_MouseWheel"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"></ColumnDefinition>
-            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <Image x:Name="imgScreen" Grid.Column="0" Grid.ColumnSpan="2"/>
-        <TextBlock x:Name="tbInfo" Grid.Column="0" TextWrapping="Wrap" TextAlignment="Left" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Hidden"/>
-        <TextBlock x:Name="tbHelp" Grid.Column="1" TextWrapping="Wrap" TextAlignment="Right" FontSize="13" Cursor="No" IsEnabled="False" Visibility="Visible" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Image x:Name="imgScreen" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="2" />
+        <TextBlock x:Name="tbInfo" Grid.Column="0" Grid.Row="0"
+                   TextWrapping="Wrap"
+                   TextAlignment="Left"
+                   FontSize="13"
+                   Cursor="No"
+                   IsEnabled="False"
+                   Visibility="Visible" />
+        <TextBlock x:Name="tbHelp" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                   TextWrapping="Wrap"
+                   TextAlignment="Right"
+                   FontSize="13"
+                   Cursor="No"
+                   IsEnabled="False"
+                   Visibility="Visible" />
+        <TextBlock x:Name="tbError" Grid.Column="0" Grid.Row="1"
+                   TextWrapping="Wrap"
+                   TextAlignment="Left"
+                   VerticalAlignment="Bottom"
+                   FontSize="13"
+                   Cursor="No"
+                   IsEnabled="False"
+                   Foreground="Red"
+                   Visibility="Visible" />
     </Grid>
 </Window>

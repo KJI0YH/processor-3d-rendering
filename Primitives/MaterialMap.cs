@@ -18,8 +18,8 @@ public class MaterialMap
 
     public Vector3 GetValue(float u, float v)
     {
-        var x = (int)MathF.Floor(_width * u);
-        var y = (int)MathF.Floor(_height * v);
+        var x = (int)MathF.Floor((_width - 1) * u);
+        var y = (int)MathF.Floor((_height - 1) * v);
         return _values[x, y];
     }
 }

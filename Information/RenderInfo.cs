@@ -19,25 +19,25 @@ public class RenderInfo
         HelpInfo = GetHelp();
     }
 
-    public string GetInformation(RenderEngine renderEngine, Model model, Camera camera)
+    public string GetInformation(RenderEngine renderEngine, Model? model, Camera? camera)
     {
         var cameraPosition = camera.SphericalPosition.ToCartesian();
         StringBuilder builder = new();
         builder
             .AppendLine($"Render time: {RenderTime} ms")
-            .AppendLine($"Vertex count: {model.Positions.Count}")
-            .AppendLine($"Polygons count: {model.Polygons.Count}")
+            .AppendLine($"Vertex count: {model?.Positions.Count ?? 0}")
+            .AppendLine($"Polygons count: {model?.Polygons.Count ?? 0}")
             .AppendLine($"Camera radius: {camera.SphericalPosition.R:F2}")
             .AppendLine($"Azimuth angle: {RadianToDegree(camera.SphericalPosition.AzimuthAngle):N0}°")
             .AppendLine($"Elevation angle: {RadianToDegree(camera.SphericalPosition.ZenithAngle):N0}°")
             .AppendLine($"Camera position: ({cameraPosition.X:F2}, {cameraPosition.Y:F2}, {cameraPosition.Z:F2})")
             .AppendLine($"Camera target: ({camera.Target.X}, {camera.Target.Y}, {camera.Target.Z})")
-            .AppendLine($"Scale: {model.Scale:F5}")
+            .AppendLine($"Scale: {model?.Scale ?? 0:F5}")
             .AppendLine($"Scale step: {Model.SCALE_STEP:F5}")
-            .AppendLine($"Rotate X: {RadianToDegree(model.XAxisRotate):N0}°")
-            .AppendLine($"Rotate Y: {RadianToDegree(model.YAxisRotate):N0}°")
-            .AppendLine($"Rotate Z: {RadianToDegree(model.ZAxisRotate):N0}°")
-            .AppendLine($"Move: ({model.XPosition:F2}, {model.YPosition:F2}, {model.ZPosition:F2})")
+            .AppendLine($"Rotate X: {RadianToDegree(model?.XAxisRotate ?? 0):N0}°")
+            .AppendLine($"Rotate Y: {RadianToDegree(model?.YAxisRotate ?? 0):N0}°")
+            .AppendLine($"Rotate Z: {RadianToDegree(model?.ZAxisRotate ?? 0):N0}°")
+            .AppendLine($"Move: ({model?.XPosition ?? 0:F2}, {model?.YPosition ?? 0:F2}, {model?.ZPosition ?? 0:F2})")
             .AppendLine($"Move step: {Model.MOVE_STEP:F2}")
             .AppendLine($"Zoom step: {camera.ZoomStep:F2}")
             .AppendLine($"FOV: {RadianToDegree(camera.FOV):N0}°")
@@ -46,10 +46,10 @@ public class RenderInfo
             .AppendLine($"Plane distance step: {camera.PlaneDistanceStep}")
             .AppendLine($"Rasterisation: {renderEngine.Rasterisation}")
             .AppendLine($"Drawing mode: {GetDescription(renderEngine.DrawMode)}")
-            .AppendLine($"Ambient:\t{renderEngine.kAmbient:N1} | {GetColorValue(renderEngine.Ambient)}")
-            .AppendLine($"Diffuse:\t{renderEngine.kDiffuse:N1} | {GetColorValue(renderEngine.Diffuse)}")
-            .AppendLine($"Specular:\t{renderEngine.kSpecular:N1} | {GetColorValue(renderEngine.Specular)}")
-            .AppendLine($"Shininess:\t{renderEngine.kShininess:N1}")
+            .AppendLine($"Ambient:\t{renderEngine.KAmbient:N1} | {GetColorValue(renderEngine.Ambient)}")
+            .AppendLine($"Diffuse:\t{renderEngine.KDiffuse:N1} | {GetColorValue(renderEngine.Diffuse)}")
+            .AppendLine($"Specular:\t{renderEngine.KSpecular:N1} | {GetColorValue(renderEngine.Specular)}")
+            .AppendLine($"Shininess:\t{renderEngine.KShininess:N1}")
             .AppendLine($"Screen width: {camera.ScreenWidth}")
             .AppendLine($"Screen height: {camera.ScreenHeight}")
             .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight:F5}");
@@ -61,7 +61,7 @@ public class RenderInfo
         StringBuilder builder = new();
         builder
             .AppendLine($"To close the application: {MainWindow.CLOSE_APP_KEY}")
-            .AppendLine($"To open a file: {MainWindow.OPEN_FILE_KEY}")
+            .AppendLine($"To open a file: {MainWindow.OPEN_MODEL_KEY}")
             .AppendLine($"For model rotation: Mouse Drag or Key Arrows")
             .AppendLine($"To zoom (in|out) of the camera: Mouse Wheel")
             .AppendLine($"To change the zoom step of the camera: {MainWindow.CONTROL_KEY} + MouseWheel")
@@ -109,11 +109,10 @@ public class RenderInfo
         return builder.ToString();
     }
 
-    public string GetParseError(string filename, string message)
+    public string GetParseError(string message)
     {
         StringBuilder builder = new();
         builder
-            .AppendLine($"File {filename} cannot be parsed")
             .AppendLine($"{message}");
         return builder.ToString();
     }

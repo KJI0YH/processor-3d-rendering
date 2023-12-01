@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Rendering.Parser;
@@ -21,6 +22,7 @@ public class ObjParser : IModelParser
     private readonly MtlParser _mtlParser = new();
     private string? _currentDirectory;
     private Material? _currentMaterial;
+    private StringBuilder _errorBuilder = new();
 
     private void InitParser()
     {
@@ -30,6 +32,7 @@ public class ObjParser : IModelParser
         _readPolygons.Clear();
         _readMaterials.Clear();
         _currentMaterial = null;
+        _errorBuilder.Clear();
     }
 
     public Model Parse(string filePath)
@@ -71,11 +74,13 @@ public class ObjParser : IModelParser
             }
             catch (MaterialNotFoundException exception)
             {
+                _errorBuilder.AppendLine(exception.Message);
             }
             catch (ParserException exception)
             {
-                throw new ParserException(
+                _errorBuilder.AppendLine(
                     $"Error in file: {filePath}\r\nin line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
+                throw new ParserException();
             }
         }
 
@@ -225,5 +230,10 @@ public class ObjParser : IModelParser
     private bool ToFloat(string value, out float result)
     {
         return float.TryParse(value, CultureInfo.InvariantCulture, out result);
+    }
+
+    public string GetErrors()
+    {
+        return _errorBuilder.ToString();
     }
 }

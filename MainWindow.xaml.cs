@@ -6,6 +6,8 @@ using Rendering.Objects;
 using Rendering.Parser;
 using Rendering.Rasterisation;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,7 +21,8 @@ namespace Rendering;
 public partial class MainWindow : Window
 {
     public const Key CLOSE_APP_KEY = Key.Escape;
-    public const Key OPEN_FILE_KEY = Key.O;
+    public const Key OPEN_MODEL_KEY = Key.O;
+    public const Key OPEN_TEXTURE_KEY = Key.T;
     public const Key INVERT_COLORS_KEY = Key.C;
     public const Key X_CONTROL_KEY = Key.X;
     public const Key Y_CONTROL_KEY = Key.Y;
@@ -28,6 +31,7 @@ public partial class MainWindow : Window
     public const Key RASTERISATION_CHANGE_KEY = Key.Q;
     public const Key INFORMATION_TOGGLE_KEY = Key.I;
     public const Key HELP_TOGGLE_KEY = Key.F1;
+    public const Key ERRORS_TOGGLE_KEY = Key.E;
     public const Key SCALE_KEY = Key.W;
     public const Key MOVE_KEY = Key.LeftShift;
     public const Key MOVE_STEP_KEY = Key.M;
@@ -41,6 +45,7 @@ public partial class MainWindow : Window
     public const Key PHONG_SHADING_DRAW_MODE_KEY = Key.D3;
     public const Key PHONG_LIGHTING_DRAW_MODE_KEY = Key.D4;
     public const Key TEXTURE_DRAW_MODE_KEY = Key.D5;
+    public const Key CUSTOM_TEXTURE_DRAW_MODE_KEY = Key.D6;
     public const Key CAMERA_RESET_KEY = Key.Home;
     public const Key MOVE_UP_KEY = Key.Up;
     public const Key MOVE_RIGHT_KEY = Key.Right;
@@ -54,80 +59,104 @@ public partial class MainWindow : Window
     public const Key SPECULAR_CONTROL_KEY = Key.S;
     public const Key SHININESS_CONTROL_KEY = Key.H;
 
-    private readonly OpenFileDialog _openFileDialog;
-    private readonly ObjParser _parser = new();
+    private readonly OpenFileDialog _openObjFileDialog;
+    private readonly OpenFileDialog _openTextureFileDialog;
+    private readonly ObjParser _modelParser = new();
+    private readonly ImageParser _imageParser = new();
     private Model? _model;
     private readonly Camera _camera = new();
-    private RenderEngine _renderEngine;
+    private RenderEngine _renderEngine = new();
     private readonly RenderInfo _renderInfo = new();
-
     private Point _mouseClickPosition;
-    private static Color _backgroundColor = Colors.Black;
-    private static Color _backgroundColorInvert = Colors.White;
-    private static Color _surfaceColor = Colors.White;
-    private static Color _lightColor = Colors.White;
-    private static Color _edgeColor = _backgroundColorInvert;
-
-    private int _rasterisationMethodIndex = 0;
-
-    private readonly IRasterisation[] _rasterisationMethods =
-    {
-        new Bresenham(),
-        new DDALine()
-    };
+    private List<Key> _pressedKeys = new();
 
     public MainWindow()
     {
         InitializeComponent();
-        _openFileDialog = new OpenFileDialog
+        _openObjFileDialog = new OpenFileDialog
         {
             Filter = "Wavefront files (.obj)|*.obj"
         };
-        tbInfo.Foreground = new SolidColorBrush(_surfaceColor);
-        tbHelp.Foreground = new SolidColorBrush(_surfaceColor);
+        _openTextureFileDialog = new OpenFileDialog
+        {
+            Filter = "Texture files|*.jpg;*.png;*.bmp;*.jpeg;|All files|*.*"
+        };
+        imgScreen.Source = _renderEngine.RenderBuffer;
+        tbInfo.Foreground = new SolidColorBrush(_renderEngine.Background.InvertColor);
+        tbInfo.Text = _renderInfo.GetInformation(_renderEngine, _model, _camera);
+        tbHelp.Foreground = new SolidColorBrush(_renderEngine.Background.InvertColor);
         tbHelp.Text = _renderInfo.HelpInfo;
     }
 
     private void Window_ContentRendered(object sender, EventArgs e)
     {
-        InitializeRenderBuffer();
+        ChangeSize();
     }
 
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        _camera.ScreenWidth = (float)ActualWidth;
-        _camera.ScreenHeight = (float)ActualHeight;
-        InitializeRenderBuffer();
+        ChangeSize();
     }
 
-    private void Window_KeyDown(object sender, KeyEventArgs e)
+    private void ChangeSize()
     {
+        _camera.ScreenWidth = (float)ActualWidth;
+        _camera.ScreenHeight = (float)ActualHeight;
+        _renderEngine.ChangeSize((int)ActualWidth, (int)ActualHeight);
+        imgScreen.Source = _renderEngine.RenderBuffer;
+    }
+
+    private void Window_PreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        _pressedKeys.Remove(e.Key);
+    }
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (!_pressedKeys.Contains(e.Key)) _pressedKeys.Add(e.Key);
         switch (e.Key)
         {
-            case OPEN_FILE_KEY:
-                if (_openFileDialog.ShowDialog() == true)
+            case OPEN_MODEL_KEY:
+                if (_openObjFileDialog.ShowDialog() == true)
                 {
                     _model = null;
-                    var filename = _openFileDialog.FileName;
+                    var filePath = _openObjFileDialog.FileName;
                     try
                     {
                         // Clear background
-                        _renderEngine.FillRenderBuffer(_backgroundColor);
-                        _model = _parser.Parse(filename);
+                        _renderEngine.Clear();
+                        _model = _modelParser.Parse(filePath);
                         _model.MoveToWorldCenter();
                         _camera.SetInitialPosition(_model);
-                        _renderEngine.Background = _backgroundColor;
-                        _renderEngine.Edge = _edgeColor;
-                        _renderEngine.Light = _lightColor;
-                        _renderEngine.Surface = _surfaceColor;
                     }
                     catch (ParserException exception)
                     {
-                        // Show error message
-                        tbInfo.Visibility = Visibility.Visible;
-                        tbInfo.Text = _renderInfo.GetParseError(filename, exception.Message);
+                    }
+
+                    // Show error message
+                    tbError.Visibility = Visibility.Visible;
+                    tbError.Text = _renderInfo.GetParseError(_modelParser.GetErrors());
+                }
+
+                _pressedKeys.Clear();
+
+                break;
+            case OPEN_TEXTURE_KEY:
+                if (_openTextureFileDialog.ShowDialog() == true)
+                {
+                    var filePath = _openTextureFileDialog.FileName;
+                    try
+                    {
+                        _renderEngine.CustomTexture = _imageParser.Parse(filePath);
+                    }
+                    catch (FileNotFoundException exception)
+                    {
+                        tbError.Visibility = Visibility.Visible;
+                        tbError.Text = _renderInfo.GetParseError(exception.Message);
                     }
                 }
+
+                _pressedKeys.Clear();
 
                 break;
             case VERTEX_ONLY_DRAW_MODE_KEY:
@@ -135,7 +164,6 @@ public partial class MainWindow : Window
                 break;
             case WIRE_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.Wire;
-                _edgeColor = _backgroundColorInvert;
                 break;
             case RASTERISATION_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.Rasterisation;
@@ -148,6 +176,9 @@ public partial class MainWindow : Window
                 break;
             case TEXTURE_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.Texture;
+                break;
+            case CUSTOM_TEXTURE_DRAW_MODE_KEY:
+                _renderEngine.DrawMode = DrawMode.Custom;
                 break;
             case INVERT_COLORS_KEY:
                 InvertColors();
@@ -168,7 +199,9 @@ public partial class MainWindow : Window
                 break;
             case HELP_TOGGLE_KEY:
                 ToggleVisibility(tbHelp);
-                tbHelp.Text = _renderInfo.HelpInfo;
+                break;
+            case ERRORS_TOGGLE_KEY:
+                ToggleVisibility(tbError);
                 break;
             case MOVE_UP_KEY:
                 _camera.ZenithAngle -= _camera.KeyRotation;
@@ -190,13 +223,6 @@ public partial class MainWindow : Window
         DrawModel(_model, _camera);
     }
 
-    private void InitializeRenderBuffer()
-    {
-        _renderEngine = new RenderEngine((int)_camera.ScreenWidth, (int)_camera.ScreenHeight);
-        _renderEngine.FillRenderBuffer(_backgroundColor);
-        imgScreen.Source = _renderEngine.RenderBuffer;
-    }
-
     private void DrawModel(Model? model, Camera camera)
     {
         if (model == null) return;
@@ -208,7 +234,6 @@ public partial class MainWindow : Window
         // Show render information
         _renderInfo.RenderTime = stop - start;
         tbInfo.Text = _renderInfo.GetInformation(_renderEngine, model, camera);
-        tbHelp.Text = _renderInfo.HelpInfo;
     }
 
     private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -218,21 +243,20 @@ public partial class MainWindow : Window
 
     private void Window_MouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton == MouseButtonState.Pressed)
-        {
-            var clickPosition = e.GetPosition(this);
-            var deltaX = (float)(_mouseClickPosition.X - clickPosition.X);
-            var deltaY = (float)(_mouseClickPosition.Y - clickPosition.Y);
-            _mouseClickPosition = clickPosition;
-            _camera.AzimuthAngle += deltaX * _camera.AngleDelta;
-            _camera.ZenithAngle += deltaY * _camera.AngleDelta;
-            DrawModel(_model, _camera);
-        }
+        if (e.LeftButton != MouseButtonState.Pressed) return;
+        var clickPosition = e.GetPosition(this);
+        var deltaX = (float)(_mouseClickPosition.X - clickPosition.X);
+        var deltaY = (float)(_mouseClickPosition.Y - clickPosition.Y);
+        _mouseClickPosition = clickPosition;
+        _camera.AzimuthAngle += deltaX * _camera.AngleDelta;
+        _camera.ZenithAngle += deltaY * _camera.AngleDelta;
+        DrawModel(_model, _camera);
     }
 
     private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (_model == null) return;
+        var delta = e.Delta > 0 ? 1 : -1;
         if (e.Delta < 0)
         {
             if (Keyboard.IsKeyDown(X_CONTROL_KEY) && Keyboard.IsKeyDown(MOVE_KEY)) _model.XPosition -= Model.MOVE_STEP;
@@ -251,13 +275,13 @@ public partial class MainWindow : Window
             else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZFar -= _camera.PlaneDistanceStep;
             else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) _camera.DecreasePlaneDistanceStep();
             else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kAmbient -= RenderEngine.K_STEP;
+                _renderEngine.KAmbient -= RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kDiffuse -= RenderEngine.K_STEP;
+                _renderEngine.KDiffuse -= RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kSpecular -= RenderEngine.K_STEP;
+                _renderEngine.KSpecular -= RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(SHININESS_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kShininess -= RenderEngine.K_STEP;
+                _renderEngine.KShininess -= RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
                 _renderEngine.Ambient.R -= RenderEngine.COLOR_STEP;
             else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
@@ -276,8 +300,6 @@ public partial class MainWindow : Window
                 _renderEngine.Specular.G -= RenderEngine.COLOR_STEP;
             else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(BLUE_CONTROL_KEY))
                 _renderEngine.Specular.B -= RenderEngine.COLOR_STEP;
-
-
             else if (Keyboard.IsKeyDown(CONTROL_KEY)) _camera.DecreaseZoomStep();
             else _camera.ZoomIn();
         }
@@ -299,13 +321,13 @@ public partial class MainWindow : Window
             else if (Keyboard.IsKeyDown(FAR_PLANE_DISTANCE_CHANGE_KEY)) _camera.ZFar += _camera.PlaneDistanceStep;
             else if (Keyboard.IsKeyDown(PLANE_DISTANCE_STEP_KEY)) _camera.IncreasePlaneDistanceStep();
             else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kAmbient += RenderEngine.K_STEP;
+                _renderEngine.KAmbient += RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(DIFFUSE_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kDiffuse += RenderEngine.K_STEP;
+                _renderEngine.KDiffuse += RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(SPECULAR_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kSpecular += RenderEngine.K_STEP;
+                _renderEngine.KSpecular += RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(SHININESS_CONTROL_KEY) && Keyboard.IsKeyDown(CONTROL_KEY))
-                _renderEngine.kShininess += RenderEngine.K_STEP;
+                _renderEngine.KShininess += RenderEngine.K_STEP;
             else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(RED_CONTROL_KEY))
                 _renderEngine.Ambient.R += RenderEngine.COLOR_STEP;
             else if (Keyboard.IsKeyDown(AMBIENT_CONTROL_KEY) && Keyboard.IsKeyDown(GREEN_CONTROL_KEY))
@@ -333,22 +355,25 @@ public partial class MainWindow : Window
 
     private void InvertColors()
     {
-        (_backgroundColor, _backgroundColorInvert) = (_backgroundColorInvert, _backgroundColor);
-        _renderEngine.Background = _backgroundColor;
-        _renderEngine.Edge = _backgroundColorInvert;
+        _renderEngine.Background.Invert();
 
-        Brush textBrush = new SolidColorBrush(_backgroundColorInvert);
+        Brush textBrush = new SolidColorBrush(_renderEngine.Background.InvertColor);
         tbInfo.Foreground = textBrush;
         tbHelp.Foreground = textBrush;
     }
 
     private void ChangeRasterisation()
     {
-        _renderEngine.Rasterisation = _rasterisationMethods[++_rasterisationMethodIndex % _rasterisationMethods.Length];
+        _renderEngine.NextRasterisation();
     }
 
     private void ToggleVisibility(TextBlock textBlock)
     {
         textBlock.Visibility = textBlock.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+    }
+
+    private void MainWindow_OnKeyUp(object sender, KeyEventArgs e)
+    {
+        throw new NotImplementedException();
     }
 }

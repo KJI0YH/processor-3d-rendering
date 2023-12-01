@@ -9,5 +9,6 @@ public enum DrawMode
     [Description("Rasterisation")] Rasterisation,
     [Description("Phong shading")] PhongShading,
     [Description("Phong lighting")] PhongLighting,
-    [Description("Texture")] Texture
+    [Description("Texture")] Texture,
+    [Description("Custom texture")] Custom
 }

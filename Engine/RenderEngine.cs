@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Rendering.Information;
@@ -12,33 +14,49 @@ namespace Rendering.Engine;
 
 public class RenderEngine
 {
-    private readonly int _bytesPerPixel;
-    private readonly int _height;
-    private readonly byte[] _pixelData;
-    private readonly int _stride;
-    private readonly int _width;
-    private readonly float[,] _zBuffer;
-    public readonly WriteableBitmap RenderBuffer;
+    private int _bytesPerPixel;
+    private int _height;
+    private byte[] _pixelData;
+    private int _stride;
+    private int _width;
+    private float[,] _zBuffer;
+    public WriteableBitmap RenderBuffer;
 
-    public IRasterisation Rasterisation = new Bresenham();
+    private static readonly IEnumerable<IRasterisation> RasterisationMethods = new List<IRasterisation>()
+    {
+        new Bresenham(),
+        new DDALine()
+    };
+
+    private static readonly IEnumerator<IRasterisation> RasterisationEnumerator =
+        RasterisationMethods.GetEnumerator();
+
+    public IRasterisation Rasterisation { get; private set; }
+
+
     public DrawMode DrawMode = DrawMode.PhongLighting;
 
-    public Color Light = Colors.White;
-    public Color Background = Colors.Black;
-    public Color Edge = Colors.Black;
-    public Color Surface = Colors.White;
-    public ColorComponent Ambient = new(0.5f, 0.5f, 0.5f);
-    public ColorComponent Diffuse = new(1f, 1f, 1f);
-    public ColorComponent Specular = new(1f, 1f, 1f);
+    public readonly ColorComponent Ambient = new(0.5f, 0.5f, 0.5f);
+    public readonly ColorComponent Diffuse = new(1f, 1f, 1f);
+    public readonly ColorComponent Specular = new(1f, 1f, 1f);
+    public readonly ColorComponent Background = new(0, 0, 0);
 
-    public float kAmbient = 0.3f;
-    public float kDiffuse = 0.8f;
-    public float kSpecular = 1.0f;
-    public float kShininess = 10f;
+    public float KAmbient = 0.1f;
+    public float KDiffuse = 1f;
+    public float KSpecular = 1.0f;
+    public float KShininess = 10f;
     public const float K_STEP = 0.1f;
     public const float COLOR_STEP = 0.1f;
 
-    public RenderEngine(int pixelWidth, int pixelHeight)
+    public MaterialMap? CustomTexture;
+
+    public RenderEngine(int pixelWidth = 1920, int pixelHeight = 1080)
+    {
+        ChangeSize(pixelWidth, pixelHeight);
+        NextRasterisation();
+    }
+
+    public void ChangeSize(int pixelWidth, int pixelHeight)
     {
         _width = pixelWidth;
         _height = pixelHeight;
@@ -47,9 +65,15 @@ public class RenderEngine
         _bytesPerPixel = (RenderBuffer.Format.BitsPerPixel + 7) / 8;
         _stride = _width * _bytesPerPixel;
         _pixelData = new byte[_width * _height * _bytesPerPixel];
+        Clear();
     }
 
-    public void FillRenderBuffer(Color fillColor)
+    public void Clear()
+    {
+        FillRenderBuffer(Background.Color);
+    }
+
+    private void FillRenderBuffer(Color fillColor)
     {
         for (var i = 0; i < _pixelData.Length; i += _bytesPerPixel)
         {
@@ -142,6 +166,9 @@ public class RenderEngine
 
         Vector3 value0, value1, value2;
 
+        if (DrawMode == DrawMode.Custom && CustomTexture == null)
+            DrawMode = DrawMode.Texture;
+
         if (DrawMode == DrawMode.Texture && polygon.Material == null)
             DrawMode = DrawMode.PhongLighting;
 
@@ -158,6 +185,7 @@ public class RenderEngine
                 value2 = vertex2.GetNormal();
                 break;
             case DrawMode.Texture:
+            case DrawMode.Custom:
                 value0 = vertex0.Texture;
                 value1 = vertex1.Texture;
                 value2 = vertex2.Texture;
@@ -225,18 +253,21 @@ public class RenderEngine
                 for (var x = left; x < right; x++)
                 {
                     Vector3 color;
+                    var interpolatedValue = leftValue + (x - leftCross.X) * kValue;
                     switch (DrawMode)
                     {
                         case DrawMode.PhongLighting:
-                            var normal = leftValue + (x - leftCross.X) * kValue;
-                            color = GetPhongColor(normal, lightPosition, -lightPosition);
+                            color = GetPhongColor(interpolatedValue, lightPosition, -lightPosition);
                             break;
                         case DrawMode.Texture:
-                            color = GetTextureColor(leftValue + (x - leftCross.X) * kValue, material, lightPosition,
+                            color = GetTextureColor(interpolatedValue, material, lightPosition,
                                 -lightPosition);
                             break;
+                        case DrawMode.Custom:
+                            color = GetCustomTextureColor(interpolatedValue, lightPosition, -lightPosition);
+                            break;
                         default:
-                            color = leftValue + (x - leftCross.X) * kValue;
+                            color = interpolatedValue;
                             break;
                     }
 
@@ -258,12 +289,12 @@ public class RenderEngine
 
     private Vector3 GetPhongColor(Vector3 normal, Vector3 light, Vector3 view)
     {
-        var ambient = kAmbient * Ambient.Normalized;
+        var ambient = KAmbient * Ambient.Normalized;
         ambient = Vector3.Clamp(ambient, Vector3.Zero, Vector3.One);
-        var diffuse = kDiffuse * MathF.Max(Vector3.Dot(normal, light), 0) * Diffuse.Normalized;
+        var diffuse = KDiffuse * MathF.Max(Vector3.Dot(normal, light), 0) * Diffuse.Normalized;
         diffuse = Vector3.Clamp(diffuse, Vector3.Zero, Vector3.One);
         var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
-        var specular = kSpecular * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), kShininess) * Specular.Normalized;
+        var specular = KSpecular * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), KShininess) * Specular.Normalized;
         specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
@@ -273,25 +304,36 @@ public class RenderEngine
         var u = texture.X;
         var v = texture.Y;
         Vector3 ambient = Vector3.Zero, diffuse = Vector3.Zero, specular = Vector3.Zero;
+        var normal = material.GetNormalValue(u, v);
         if (material is { Diffuse: not null })
             ambient = diffuse = material.GetDiffuseValue(u, v);
-        var normal = material.GetNormalValue(u, v);
+        ambient *= KAmbient;
+        diffuse *= KDiffuse * MathF.Max(Vector3.Dot(normal, light), 0);
         var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
         var kS = material.GetMirrorValue(u, v);
-        specular = kS * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), kShininess) * Specular.Normalized;
+        specular = kS * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), KShininess) * Specular.Normalized;
         specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
+        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
+    }
+
+    private Vector3 GetCustomTextureColor(Vector3 texture, Vector3 light, Vector3 view)
+    {
+        var u = texture.X;
+        var v = texture.Y;
+        Vector3 ambient = Vector3.Zero, diffuse = Vector3.Zero, specular = Vector3.Zero;
+        ambient = diffuse = CustomTexture.GetValue(u, v);
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
 
     public void DrawModel(Model model, Camera camera)
     {
         // Fill background
-        FillRenderBuffer(Background);
+        FillRenderBuffer(Background.Color);
         ResetZBuffer();
 
-        var surfaceColor = NormalizeColor(Surface);
-        var edgeColor = NormalizeColor(Edge);
-        var lightColor = NormalizeColor(Light);
+        var surfaceColor = Ambient.Normalized;
+        var edgeColor = Background.InvertNormalized;
+        var lightColor = Specular.Normalized;
         var lightPosition = Vector3.Normalize(camera.Position);
 
         model.Update(camera);
@@ -384,8 +426,14 @@ public class RenderEngine
             _zBuffer[i, j] = 1.0f;
     }
 
-    private Vector3 NormalizeColor(Color color)
+    public void NextRasterisation()
     {
-        return new Vector3(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f);
+        if (!RasterisationEnumerator.MoveNext())
+        {
+            RasterisationEnumerator.Reset();
+            RasterisationEnumerator.MoveNext();
+        }
+
+        Rasterisation = RasterisationEnumerator.Current;
     }
 }
