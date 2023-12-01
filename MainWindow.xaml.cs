@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     public const Key RASTERISATION_DRAW_MODE_KEY = Key.D2;
     public const Key PHONG_SHADING_DRAW_MODE_KEY = Key.D3;
     public const Key PHONG_LIGHTING_DRAW_MODE_KEY = Key.D4;
+    public const Key TEXTURE_DRAW_MODE_KEY = Key.D5;
     public const Key CAMERA_RESET_KEY = Key.Home;
     public const Key MOVE_UP_KEY = Key.Up;
     public const Key MOVE_RIGHT_KEY = Key.Right;
@@ -144,6 +145,9 @@ public partial class MainWindow : Window
                 break;
             case PHONG_LIGHTING_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.PhongLighting;
+                break;
+            case TEXTURE_DRAW_MODE_KEY:
+                _renderEngine.DrawMode = DrawMode.Texture;
                 break;
             case INVERT_COLORS_KEY:
                 InvertColors();

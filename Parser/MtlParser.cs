@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Mime;
 using System.Numerics;
 using System.Text.RegularExpressions;
-using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 using Rendering.Exceptions;
 using Rendering.Primitives;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Windows.Media.TextFormatting;
 using Image = System.Drawing.Image;
 
 namespace Rendering.Parser;
@@ -19,13 +15,28 @@ namespace Rendering.Parser;
 public class MtlParser
 {
     private string? _currentDirectory;
-    private Material _currentMaterial;
+    private Material? _currentMaterial;
+
+    private void InitParser()
+    {
+        _currentMaterial = null;
+    }
 
     public List<Material> Parse(string filePath)
     {
-        List<Material> materials = new();
         _currentDirectory = Path.GetDirectoryName(filePath);
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        InitParser();
+        List<Material> materials = new();
+        Stream fileStream;
+        try
+        {
+            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        }
+        catch (FileNotFoundException e)
+        {
+            throw new MaterialNotFoundException($"Mtl file {filePath} not found");
+        }
+
         using var streamReader = new StreamReader(fileStream);
         var line = string.Empty;
         var lineCount = 0;
@@ -81,7 +92,7 @@ public class MtlParser
         }
         catch (FileNotFoundException e)
         {
-            throw new ParserException($"File {filePath} not found");
+            throw new MaterialNotFoundException($"Material {filePath} not found");
         }
 
         var width = bitmap.Width;
@@ -100,16 +111,18 @@ public class MtlParser
             var rgbValues = new byte[bytes];
             Marshal.Copy(pointer, rgbValues, 0, bytes);
 
-            for (var y = 0; y < height; y++)
+            for (var y = height - 1; y >= 0; y--)
             for (var x = 0; x < width; x++)
             {
-                normalValues[x, y] = new Vector3(
-                    rgbValues[index++] / maxColorValue,
-                    rgbValues[index++] / maxColorValue,
-                    rgbValues[index++] / maxColorValue);
+                float r = 0, g = 0, b = 0;
+                if (bytesPerPixel >= 1) b = rgbValues[index++] / maxColorValue;
+                if (bytesPerPixel >= 2) g = rgbValues[index++] / maxColorValue;
+                if (bytesPerPixel >= 3) r = rgbValues[index++] / maxColorValue;
+
+                normalValues[x, y] = new Vector3(r, g, b);
 
                 // Skip alpha component
-                index += bytesPerPixel - 3;
+                if (bytesPerPixel > 3) index += bytesPerPixel - 3;
             }
         }
         finally

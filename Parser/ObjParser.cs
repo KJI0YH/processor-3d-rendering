@@ -28,6 +28,8 @@ public class ObjParser : IModelParser
         _readNormals.Clear();
         _readTextures.Clear();
         _readPolygons.Clear();
+        _readMaterials.Clear();
+        _currentMaterial = null;
     }
 
     public Model Parse(string filePath)
@@ -38,13 +40,13 @@ public class ObjParser : IModelParser
         using var streamReader = new StreamReader(fileStream);
         var line = string.Empty;
         var lineCount = 0;
-        try
+        while ((line = streamReader?.ReadLine()) != null)
         {
-            while ((line = streamReader?.ReadLine()) != null)
+            lineCount++;
+            line = Regex.Replace(line, @"\s{2,}", " ");
+            var tokens = line.Trim().Split(' ');
+            try
             {
-                lineCount++;
-                line = Regex.Replace(line, @"\s{2,}", " ");
-                var tokens = line.Trim().Split(' ');
                 switch (tokens[0])
                 {
                     case "v":
@@ -67,16 +69,19 @@ public class ObjParser : IModelParser
                         break;
                 }
             }
-        }
-        catch (ParserException exception)
-        {
-            throw new ParserException(
-                $"Error in file: {filePath}\r\nin line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
+            catch (MaterialNotFoundException exception)
+            {
+            }
+            catch (ParserException exception)
+            {
+                throw new ParserException(
+                    $"Error in file: {filePath}\r\nin line: {lineCount}\r\nLine: {line}\r\nException: {exception.Message}");
+            }
         }
 
         SetVertexNormals();
         Model model = new(_readPositions, _readNormals, _readPolygons);
-        if (model.IsEmpty()) throw new ParserException($"File does not contain a model in obj format");
+        if (model.IsEmpty()) throw new ParserException($"File {filePath} does not contain a model in obj format");
         return model;
     }
 
@@ -213,7 +218,7 @@ public class ObjParser : IModelParser
         if (tokens.Length < 2) throw new ParserException("Invalid usemtl syntax");
         var materialName = tokens[1];
         var material = _readMaterials.Find(m => m.Name == materialName);
-        if (material == null) throw new ParserException($"Material with name {materialName} does not exists");
+        if (material == null) throw new MaterialNotFoundException($"Material with name {materialName} does not exists");
         return material;
     }
 

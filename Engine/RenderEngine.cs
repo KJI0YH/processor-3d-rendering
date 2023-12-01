@@ -27,14 +27,14 @@ public class RenderEngine
     public Color Background = Colors.Black;
     public Color Edge = Colors.Black;
     public Color Surface = Colors.White;
-    public ColorComponent Ambient = new(1, 0, 1);
-    public ColorComponent Diffuse = new(0, 0.5f, 0);
-    public ColorComponent Specular = new(0.5f, 0.5f, 0);
+    public ColorComponent Ambient = new(0.5f, 0.5f, 0.5f);
+    public ColorComponent Diffuse = new(1f, 1f, 1f);
+    public ColorComponent Specular = new(1f, 1f, 1f);
 
-    public float kAmbient = 0.5f;
-    public float kDiffuse = 0.5f;
+    public float kAmbient = 0.3f;
+    public float kDiffuse = 0.8f;
     public float kSpecular = 1.0f;
-    public float kShininess = 0.5f;
+    public float kShininess = 10f;
     public const float K_STEP = 0.1f;
     public const float COLOR_STEP = 0.1f;
 
@@ -142,6 +142,9 @@ public class RenderEngine
 
         Vector3 value0, value1, value2;
 
+        if (DrawMode == DrawMode.Texture && polygon.Material == null)
+            DrawMode = DrawMode.PhongLighting;
+
         switch (DrawMode)
         {
             case DrawMode.PhongShading:
@@ -154,17 +157,22 @@ public class RenderEngine
                 value1 = vertex1.GetNormal();
                 value2 = vertex2.GetNormal();
                 break;
+            case DrawMode.Texture:
+                value0 = vertex0.Texture;
+                value1 = vertex1.Texture;
+                value2 = vertex2.Texture;
+                break;
             default:
                 value0 = value1 = value2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
                 break;
         }
 
         ScanLineTriangle(vertex0.GetViewPort(), vertex1.GetViewPort(), vertex2.GetViewPort(),
-            value0, value1, value2, lightPosition);
+            value0, value1, value2, lightPosition, polygon.Material);
     }
 
     private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2,
-        Vector3 value0, Vector3 value1, Vector3 value2, Vector3 lightPosition)
+        Vector3 value0, Vector3 value1, Vector3 value2, Vector3 lightPosition, Material? material)
     {
         // Vertex sort
         if (point0.Y > point2.Y)
@@ -188,9 +196,9 @@ public class RenderEngine
         var kPoint0 = (point2 - point0) / (point2.Y - point0.Y);
         var kPoint1 = (point1 - point0) / (point1.Y - point0.Y);
         var kPoint2 = (point2 - point1) / (point2.Y - point1.Y);
-        var kColor0 = (value2 - value0) / (point2.Y - point0.Y);
-        var kColor1 = (value1 - value0) / (point1.Y - point0.Y);
-        var kColor2 = (value2 - value1) / (point2.Y - point1.Y);
+        var kValue0 = (value2 - value0) / (point2.Y - point0.Y);
+        var kValue1 = (value1 - value0) / (point1.Y - point0.Y);
+        var kValue2 = (value2 - value1) / (point2.Y - point1.Y);
         var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
         var bottom = Math.Min(_height, (int)Math.Ceiling(point2.Y));
         try
@@ -201,16 +209,16 @@ public class RenderEngine
             for (var y = top; y < bottom; y++)
             {
                 var leftCross = point0 + (y - point0.Y) * kPoint0;
-                var leftColor = value0 + (y - point0.Y) * kColor0;
+                var leftValue = value0 + (y - point0.Y) * kValue0;
                 var rightCross = y < point1.Y ? point0 + (y - point0.Y) * kPoint1 : point1 + (y - point1.Y) * kPoint2;
-                var rightColor = y < point1.Y ? value0 + (y - point0.Y) * kColor1 : value1 + (y - point1.Y) * kColor2;
+                var rightValue = y < point1.Y ? value0 + (y - point0.Y) * kValue1 : value1 + (y - point1.Y) * kValue2;
                 if (leftCross.X > rightCross.X)
                 {
                     (leftCross, rightCross) = (rightCross, leftCross);
-                    (leftColor, rightColor) = (rightColor, leftColor);
+                    (leftValue, rightValue) = (rightValue, leftValue);
                 }
 
-                var kColor = (rightColor - leftColor) / (rightCross.X - leftCross.X);
+                var kValue = (rightValue - leftValue) / (rightCross.X - leftCross.X);
                 var kPoint = (rightCross - leftCross) / (rightCross.X - leftCross.X);
                 var left = Math.Max(0, (int)Math.Ceiling(leftCross.X));
                 var right = Math.Min(_width, (int)Math.Ceiling(rightCross.X));
@@ -220,11 +228,15 @@ public class RenderEngine
                     switch (DrawMode)
                     {
                         case DrawMode.PhongLighting:
-                            var normal = leftColor + (x - leftCross.X) * kColor;
+                            var normal = leftValue + (x - leftCross.X) * kValue;
                             color = GetPhongColor(normal, lightPosition, -lightPosition);
                             break;
+                        case DrawMode.Texture:
+                            color = GetTextureColor(leftValue + (x - leftCross.X) * kValue, material, lightPosition,
+                                -lightPosition);
+                            break;
                         default:
-                            color = leftColor + (x - leftCross.X) * kColor;
+                            color = leftValue + (x - leftCross.X) * kValue;
                             break;
                     }
 
@@ -252,6 +264,21 @@ public class RenderEngine
         diffuse = Vector3.Clamp(diffuse, Vector3.Zero, Vector3.One);
         var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
         var specular = kSpecular * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), kShininess) * Specular.Normalized;
+        specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
+        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
+    }
+
+    private Vector3 GetTextureColor(Vector3 texture, Material? material, Vector3 light, Vector3 view)
+    {
+        var u = texture.X;
+        var v = texture.Y;
+        Vector3 ambient = Vector3.Zero, diffuse = Vector3.Zero, specular = Vector3.Zero;
+        if (material is { Diffuse: not null })
+            ambient = diffuse = material.GetDiffuseValue(u, v);
+        var normal = material.GetNormalValue(u, v);
+        var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
+        var kS = material.GetMirrorValue(u, v);
+        specular = kS * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), kShininess) * Specular.Normalized;
         specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
@@ -292,6 +319,7 @@ public class RenderEngine
                 case DrawMode.Rasterisation:
                 case DrawMode.PhongShading:
                 case DrawMode.PhongLighting:
+                case DrawMode.Texture:
                 default:
                     DrawRasterisation(polygon, camera, lightColor, lightPosition, surfaceColor);
                     break;
