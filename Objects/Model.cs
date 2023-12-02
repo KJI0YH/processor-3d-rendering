@@ -20,8 +20,8 @@ public class Model
     private float _zPosition;
     private float _scale = 1.0f;
 
-    public static float SCALE_STEP = 0.1f;
-    public static float MOVE_STEP = 1f;
+    public static float ScaleStep = 0.1f;
+    public static float MoveStep = 1f;
     public const float MOUSE_ROTATION_DELTA = MathF.PI / 36;
 
     private Matrix4x4 _scaleMatrix;
@@ -135,38 +135,38 @@ public class Model
 
     public void IncreaseScaleStep()
     {
-        if (SCALE_STEP > 1) SCALE_STEP += 1;
-        else if (SCALE_STEP > 0.1) SCALE_STEP += 0.1f;
-        else if (SCALE_STEP > 0.01) SCALE_STEP += 0.01f;
-        else if (SCALE_STEP > 0.001) SCALE_STEP += 0.001f;
-        else SCALE_STEP += 0.0001f;
+        if (ScaleStep > 1) ScaleStep += 1;
+        else if (ScaleStep > 0.1) ScaleStep += 0.1f;
+        else if (ScaleStep > 0.01) ScaleStep += 0.01f;
+        else if (ScaleStep > 0.001) ScaleStep += 0.001f;
+        else ScaleStep += 0.0001f;
     }
 
     public void DecreaseScaleStep()
     {
-        if (SCALE_STEP > 1) SCALE_STEP -= 1;
-        else if (SCALE_STEP > 0.1) SCALE_STEP -= 0.01f;
-        else if (SCALE_STEP > 0.01) SCALE_STEP -= 0.001f;
-        else if (SCALE_STEP > 0.001) SCALE_STEP -= 0.0001f;
-        else SCALE_STEP -= 0.00001f;
-        if (SCALE_STEP < 0.00001) SCALE_STEP = 0.00001f;
+        if (ScaleStep > 1) ScaleStep -= 1;
+        else if (ScaleStep > 0.1) ScaleStep -= 0.01f;
+        else if (ScaleStep > 0.01) ScaleStep -= 0.001f;
+        else if (ScaleStep > 0.001) ScaleStep -= 0.0001f;
+        else ScaleStep -= 0.00001f;
+        if (ScaleStep < 0.00001) ScaleStep = 0.00001f;
     }
 
     public void IncreaseMoveStep()
     {
-        if (MOVE_STEP < 1) MOVE_STEP += 0.1f;
-        else if (MOVE_STEP < 10) MOVE_STEP += 1;
-        else if (MOVE_STEP < 100) MOVE_STEP += 5;
-        else MOVE_STEP += 10;
+        if (MoveStep < 1) MoveStep += 0.1f;
+        else if (MoveStep < 10) MoveStep += 1;
+        else if (MoveStep < 100) MoveStep += 5;
+        else MoveStep += 10;
     }
 
     public void DecreaseMoveStep()
     {
-        if (MOVE_STEP > 100) MOVE_STEP -= 10;
-        else if (MOVE_STEP > 10) MOVE_STEP -= 5;
-        else if (MOVE_STEP > 1) MOVE_STEP -= 1;
-        else MOVE_STEP -= 0.1f;
-        if (MOVE_STEP < 0.1f) MOVE_STEP = 0.1f;
+        if (MoveStep > 100) MoveStep -= 10;
+        else if (MoveStep > 10) MoveStep -= 5;
+        else if (MoveStep > 1) MoveStep -= 1;
+        else MoveStep -= 0.1f;
+        if (MoveStep < 0.1f) MoveStep = 0.1f;
     }
 
     public void MoveToWorldCenter()

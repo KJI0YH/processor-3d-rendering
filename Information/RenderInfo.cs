@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Numerics;
 using System.Text;
 using System.Windows.Media;
+using Rendering.Actions;
 using Rendering.Engine;
 using Rendering.Primitives;
 
@@ -33,17 +34,17 @@ public class RenderInfo
             .AppendLine($"Camera position: ({cameraPosition.X:F2}, {cameraPosition.Y:F2}, {cameraPosition.Z:F2})")
             .AppendLine($"Camera target: ({camera.Target.X}, {camera.Target.Y}, {camera.Target.Z})")
             .AppendLine($"Scale: {model?.Scale ?? 0:F5}")
-            .AppendLine($"Scale step: {Model.SCALE_STEP:F5}")
+            .AppendLine($"Scale step: {Model.ScaleStep:F5}")
             .AppendLine($"Rotate X: {RadianToDegree(model?.XAxisRotate ?? 0):N0}°")
             .AppendLine($"Rotate Y: {RadianToDegree(model?.YAxisRotate ?? 0):N0}°")
             .AppendLine($"Rotate Z: {RadianToDegree(model?.ZAxisRotate ?? 0):N0}°")
             .AppendLine($"Move: ({model?.XPosition ?? 0:F2}, {model?.YPosition ?? 0:F2}, {model?.ZPosition ?? 0:F2})")
-            .AppendLine($"Move step: {Model.MOVE_STEP:F2}")
+            .AppendLine($"Move step: {Model.MoveStep:F2}")
             .AppendLine($"Zoom step: {camera.ZoomStep:F2}")
             .AppendLine($"FOV: {RadianToDegree(camera.FOV):N0}°")
             .AppendLine($"Near plane distance: {camera.ZNear}")
             .AppendLine($"Far plane distance: {camera.ZFar}")
-            .AppendLine($"Plane distance step: {camera.PlaneDistanceStep}")
+            .AppendLine($"Plane distance step: {Camera.PlaneDistanceStep}")
             .AppendLine($"Rasterisation: {renderEngine.Rasterisation}")
             .AppendLine($"Drawing mode: {GetDescription(renderEngine.DrawMode)}")
             .AppendLine($"Ambient:\t{renderEngine.KAmbient:N1} | {GetColorValue(renderEngine.Ambient)}")
@@ -60,52 +61,52 @@ public class RenderInfo
     {
         StringBuilder builder = new();
         builder
-            .AppendLine($"To close the application: {MainWindow.CLOSE_APP_KEY}")
-            .AppendLine($"To open a file: {MainWindow.OPEN_MODEL_KEY}")
+            .AppendLine($"To close the application: {Actions.ActionList.CLOSE_APP_KEY}")
+            .AppendLine($"To open a file: {Actions.ActionList.OPEN_MODEL_KEY}")
             .AppendLine($"For model rotation: Mouse Drag or Key Arrows")
             .AppendLine($"To zoom (in|out) of the camera: Mouse Wheel")
-            .AppendLine($"To change the zoom step of the camera: {MainWindow.CONTROL_KEY} + MouseWheel")
-            .AppendLine($"For rotation around the X axis: {MainWindow.X_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For rotation around the Y axis: {MainWindow.Y_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For rotation around the Z axis: {MainWindow.Z_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For X axis movement: {MainWindow.MOVE_KEY} + {MainWindow.X_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For Y axis movement: {MainWindow.MOVE_KEY} + {MainWindow.Y_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For Z axis movement: {MainWindow.MOVE_KEY} + {MainWindow.Z_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For change move step of the model: {MainWindow.MOVE_STEP_KEY} + Mouse Wheel")
-            .AppendLine($"For scaling model: {MainWindow.SCALE_KEY} + Mouse Wheel")
-            .AppendLine($"For change scaling step of the model: {MainWindow.CONTROL_KEY} + " +
-                        $"{MainWindow.SCALE_KEY} + Mouse Wheel")
-            .AppendLine($"To change the FOV: {MainWindow.FOV_CHANGE_KEY} + Mouse Wheel")
-            .AppendLine($"To change near plane distance: {MainWindow.NEAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
-            .AppendLine($"To change far plane distance: {MainWindow.FAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
-            .AppendLine($"To change plane distance step: {MainWindow.PLANE_DISTANCE_STEP_KEY} + Mouse Wheel")
-            .AppendLine($"To change Ambient coefficient: {MainWindow.CONTROL_KEY} + " +
-                        $"{MainWindow.AMBIENT_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Diffuse coefficient: {MainWindow.CONTROL_KEY} + " +
-                        $"{MainWindow.DIFFUSE_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Specular coefficient: {MainWindow.CONTROL_KEY} + " +
-                        $"{MainWindow.SPECULAR_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Shininess coefficient: {MainWindow.CONTROL_KEY} + " +
-                        $"{MainWindow.SHININESS_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Ambient color components: {MainWindow.AMBIENT_CONTROL_KEY} + " +
-                        $"({MainWindow.RED_CONTROL_KEY} | {MainWindow.GREEN_CONTROL_KEY} | {MainWindow.BLUE_CONTROL_KEY})" +
+            .AppendLine($"To change the zoom step of the camera: {Actions.ActionList.CONTROL_KEY} + MouseWheel")
+            .AppendLine($"For rotation around the X axis: {Actions.ActionList.X_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For rotation around the Y axis: {Actions.ActionList.Y_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For rotation around the Z axis: {Actions.ActionList.Z_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For X axis movement: {Actions.ActionList.MOVE_KEY} + {Actions.ActionList.X_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For Y axis movement: {Actions.ActionList.MOVE_KEY} + {Actions.ActionList.Y_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For Z axis movement: {Actions.ActionList.MOVE_KEY} + {Actions.ActionList.Z_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For change move step of the model: {Actions.ActionList.MOVE_STEP_KEY} + Mouse Wheel")
+            .AppendLine($"For scaling model: {Actions.ActionList.SCALE_KEY} + Mouse Wheel")
+            .AppendLine($"For change scaling step of the model: {Actions.ActionList.CONTROL_KEY} + " +
+                        $"{Actions.ActionList.SCALE_KEY} + Mouse Wheel")
+            .AppendLine($"To change the FOV: {Actions.ActionList.FOV_CHANGE_KEY} + Mouse Wheel")
+            .AppendLine($"To change near plane distance: {Actions.ActionList.NEAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
+            .AppendLine($"To change far plane distance: {Actions.ActionList.FAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
+            .AppendLine($"To change plane distance step: {Actions.ActionList.PLANE_DISTANCE_STEP_KEY} + Mouse Wheel")
+            .AppendLine($"To change Ambient coefficient: {Actions.ActionList.CONTROL_KEY} + " +
+                        $"{Actions.ActionList.AMBIENT_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Diffuse coefficient: {Actions.ActionList.CONTROL_KEY} + " +
+                        $"{Actions.ActionList.DIFFUSE_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Specular coefficient: {Actions.ActionList.CONTROL_KEY} + " +
+                        $"{Actions.ActionList.SPECULAR_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Shininess coefficient: {Actions.ActionList.CONTROL_KEY} + " +
+                        $"{Actions.ActionList.SHININESS_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Ambient color components: {Actions.ActionList.AMBIENT_CONTROL_KEY} + " +
+                        $"({Actions.ActionList.RED_CONTROL_KEY} | {Actions.ActionList.GREEN_CONTROL_KEY} | {Actions.ActionList.BLUE_CONTROL_KEY})" +
                         $" + Mouse Wheel")
-            .AppendLine($"To change Diffuse color components: {MainWindow.DIFFUSE_CONTROL_KEY} + " +
-                        $"({MainWindow.RED_CONTROL_KEY} | {MainWindow.GREEN_CONTROL_KEY} | {MainWindow.BLUE_CONTROL_KEY})" +
+            .AppendLine($"To change Diffuse color components: {Actions.ActionList.DIFFUSE_CONTROL_KEY} + " +
+                        $"({Actions.ActionList.RED_CONTROL_KEY} | {Actions.ActionList.GREEN_CONTROL_KEY} | {Actions.ActionList.BLUE_CONTROL_KEY})" +
                         $" + Mouse Wheel")
-            .AppendLine($"To change Specular color components: {MainWindow.SPECULAR_CONTROL_KEY} + " +
-                        $"({MainWindow.RED_CONTROL_KEY} | {MainWindow.GREEN_CONTROL_KEY} | {MainWindow.BLUE_CONTROL_KEY})" +
+            .AppendLine($"To change Specular color components: {Actions.ActionList.SPECULAR_CONTROL_KEY} + " +
+                        $"({Actions.ActionList.RED_CONTROL_KEY} | {Actions.ActionList.GREEN_CONTROL_KEY} | {Actions.ActionList.BLUE_CONTROL_KEY})" +
                         $" + Mouse Wheel")
-            .AppendLine($"To invert colors: {MainWindow.INVERT_COLORS_KEY}")
-            .AppendLine($"To set the camera to the initial position: {MainWindow.CAMERA_RESET_KEY}")
-            .AppendLine($"To change the rasterisation algorithm: {MainWindow.RASTERISATION_CHANGE_KEY}")
-            .AppendLine($"Vertex only drawing mode: {MainWindow.VERTEX_ONLY_DRAW_MODE_KEY}")
-            .AppendLine($"Wire drawing mode: {MainWindow.WIRE_DRAW_MODE_KEY}")
-            .AppendLine($"Rasterisation drawing mode: {MainWindow.RASTERISATION_DRAW_MODE_KEY}")
-            .AppendLine($"Phong shading drawing mode: {MainWindow.PHONG_SHADING_DRAW_MODE_KEY}")
-            .AppendLine($"Phong lighting drawing mode: {MainWindow.PHONG_LIGHTING_DRAW_MODE_KEY}")
-            .AppendLine($"To toggle the render information: {MainWindow.INFORMATION_TOGGLE_KEY}")
-            .AppendLine($"To toggle the help : {MainWindow.HELP_TOGGLE_KEY}");
+            .AppendLine($"To invert colors: {Actions.ActionList.INVERT_COLORS_KEY}")
+            .AppendLine($"To set the camera to the initial position: {Actions.ActionList.CAMERA_RESET_KEY}")
+            .AppendLine($"To change the rasterisation algorithm: {Actions.ActionList.RASTERISATION_CHANGE_KEY}")
+            .AppendLine($"Vertex only drawing mode: {Actions.ActionList.VERTEX_ONLY_DRAW_MODE_KEY}")
+            .AppendLine($"Wire drawing mode: {Actions.ActionList.WIRE_DRAW_MODE_KEY}")
+            .AppendLine($"Rasterisation drawing mode: {Actions.ActionList.RASTERISATION_DRAW_MODE_KEY}")
+            .AppendLine($"Phong shading drawing mode: {Actions.ActionList.PHONG_SHADING_DRAW_MODE_KEY}")
+            .AppendLine($"Phong lighting drawing mode: {Actions.ActionList.PHONG_LIGHTING_DRAW_MODE_KEY}")
+            .AppendLine($"To toggle the render information: {Actions.ActionList.INFORMATION_TOGGLE_KEY}")
+            .AppendLine($"To toggle the help : {Actions.ActionList.HELP_TOGGLE_KEY}");
         return builder.ToString();
     }
 

@@ -14,8 +14,8 @@ public class Camera
     public float ZoomStep = 0.1f;
     public float AngleDelta = MathF.PI / 360;
     public float KeyRotation = MathF.PI / 36;
-    public float FovStep = MathF.PI / 180;
-    public float PlaneDistanceStep = 1;
+    public const float FOV_STEP = MathF.PI / 180;
+    public static float PlaneDistanceStep = 1;
 
     public Matrix4x4 View { get; private set; }
     public Matrix4x4 Projection { get; private set; }
@@ -62,8 +62,8 @@ public class Camera
         {
             if (fov != value)
             {
-                if (value < FovStep) fov = FovStep;
-                else if (value >= MathF.PI) fov = MathF.PI - FovStep;
+                if (value < FOV_STEP) fov = FOV_STEP;
+                else if (value >= MathF.PI) fov = MathF.PI - FOV_STEP;
                 else fov = value;
                 UpdateProjectionMatrix();
             }
@@ -203,12 +203,12 @@ public class Camera
 
     public void SetInitialPosition(Model model)
     {
-        float xMax = model.Positions.Max(v => v.Original.X);
-        float xMin = model.Positions.Min(v => v.Original.X);
-        float yMax = model.Positions.Max(v => v.Original.Y);
-        float yMin = model.Positions.Min(v => v.Original.Y);
-        float zMax = model.Positions.Max(v => v.Original.Z);
-        float zMin = model.Positions.Min(v => v.Original.Z);
+        var xMax = model.Positions.Max(v => v.Original.X);
+        var xMin = model.Positions.Min(v => v.Original.X);
+        var yMax = model.Positions.Max(v => v.Original.Y);
+        var yMin = model.Positions.Min(v => v.Original.Y);
+        var zMax = model.Positions.Max(v => v.Original.Z);
+        var zMin = model.Positions.Min(v => v.Original.Z);
         var radiuses = new float[]
         {
             xMax - xMin,
