@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices.JavaScript;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Microsoft.VisualBasic.FileIO;
 using Rendering.Information;
 using Rendering.Objects;
 using Rendering.Primitives;
@@ -34,17 +35,17 @@ public class RenderEngine
     public IRasterisation Rasterisation { get; private set; }
 
 
-    public DrawMode DrawMode = DrawMode.PhongLighting;
+    public DrawMode DrawMode = DrawMode.Lambert;
 
     public readonly ColorComponent Ambient = new(0.5f, 0.5f, 0.5f);
     public readonly ColorComponent Diffuse = new(1f, 1f, 1f);
     public readonly ColorComponent Specular = new(1f, 1f, 1f);
     public readonly ColorComponent Background = new(0, 0, 0);
 
-    public float KAmbient = 0.1f;
-    public float KDiffuse = 1f;
+    public float KAmbient = 0.3f;
+    public float KDiffuse = 0.7f;
     public float KSpecular = 1.0f;
-    public float KShininess = 10f;
+    public float KShininess = 20f;
     public const float K_STEP = 0.1f;
     public const float COLOR_STEP = 0.1f;
 
@@ -139,208 +140,21 @@ public class RenderEngine
         }
     }
 
-    private static int GetColorData(Vector3 color)
-    {
-        var colorData = (int)(255 * color.X) << 16;
-        colorData |= (int)(255 * color.Y) << 8;
-        colorData |= (int)(255 * color.Z);
-        return colorData;
-    }
-
-    private static Vector3 GetPointColor(Vector3 normal, Vector3 lightColor, Vector3 lightPosition,
-        Vector3 surfaceColor)
-    {
-        var intensity = Math.Max(Vector3.Dot(lightPosition, normal), 0);
-        return new Vector3(
-            intensity * lightColor.X * surfaceColor.X,
-            intensity * lightColor.Y * surfaceColor.Y,
-            intensity * lightColor.Z * surfaceColor.Z
-        );
-    }
-
-    private void DrawPolygon(Polygon polygon, Vector3 lightColor, Vector3 lightPosition, Vector3 surfaceColor)
-    {
-        var vertex0 = polygon.Vertices[0];
-        var vertex1 = polygon.Vertices[1];
-        var vertex2 = polygon.Vertices[2];
-
-        Vector3 value0, value1, value2;
-
-        if (DrawMode == DrawMode.Custom && CustomTexture == null)
-            DrawMode = DrawMode.Texture;
-
-        if (DrawMode == DrawMode.Texture && polygon.Material == null)
-            DrawMode = DrawMode.PhongLighting;
-
-        switch (DrawMode)
-        {
-            case DrawMode.PhongShading:
-                value0 = GetPointColor(vertex0.GetNormal(), lightColor, lightPosition, surfaceColor);
-                value1 = GetPointColor(vertex1.GetNormal(), lightColor, lightPosition, surfaceColor);
-                value2 = GetPointColor(vertex2.GetNormal(), lightColor, lightPosition, surfaceColor);
-                break;
-            case DrawMode.PhongLighting:
-                value0 = vertex0.GetNormal();
-                value1 = vertex1.GetNormal();
-                value2 = vertex2.GetNormal();
-                break;
-            case DrawMode.Texture:
-            case DrawMode.Custom:
-                value0 = vertex0.Texture;
-                value1 = vertex1.Texture;
-                value2 = vertex2.Texture;
-                break;
-            default:
-                value0 = value1 = value2 = GetPointColor(polygon.Normal, lightColor, lightPosition, surfaceColor);
-                break;
-        }
-
-        ScanLineTriangle(vertex0.GetViewPort(), vertex1.GetViewPort(), vertex2.GetViewPort(),
-            value0, value1, value2, lightPosition, polygon.Material);
-    }
-
-    private void ScanLineTriangle(Vector3 point0, Vector3 point1, Vector3 point2,
-        Vector3 value0, Vector3 value1, Vector3 value2, Vector3 lightPosition, Material? material)
-    {
-        // Vertex sort
-        if (point0.Y > point2.Y)
-        {
-            (point0, point2) = (point2, point0);
-            (value0, value2) = (value2, value0);
-        }
-
-        if (point0.Y > point1.Y)
-        {
-            (point0, point1) = (point1, point0);
-            (value0, value1) = (value1, value0);
-        }
-
-        if (point1.Y > point2.Y)
-        {
-            (point1, point2) = (point2, point1);
-            (value1, value2) = (value2, value1);
-        }
-
-        var kPoint0 = (point2 - point0) / (point2.Y - point0.Y);
-        var kPoint1 = (point1 - point0) / (point1.Y - point0.Y);
-        var kPoint2 = (point2 - point1) / (point2.Y - point1.Y);
-        var kValue0 = (value2 - value0) / (point2.Y - point0.Y);
-        var kValue1 = (value1 - value0) / (point1.Y - point0.Y);
-        var kValue2 = (value2 - value1) / (point2.Y - point1.Y);
-        var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
-        var bottom = Math.Min(_height, (int)Math.Ceiling(point2.Y));
-        try
-        {
-            // Reserve the back buffer for updates
-            RenderBuffer.Lock();
-
-            for (var y = top; y < bottom; y++)
-            {
-                var leftCross = point0 + (y - point0.Y) * kPoint0;
-                var leftValue = value0 + (y - point0.Y) * kValue0;
-                var rightCross = y < point1.Y ? point0 + (y - point0.Y) * kPoint1 : point1 + (y - point1.Y) * kPoint2;
-                var rightValue = y < point1.Y ? value0 + (y - point0.Y) * kValue1 : value1 + (y - point1.Y) * kValue2;
-                if (leftCross.X > rightCross.X)
-                {
-                    (leftCross, rightCross) = (rightCross, leftCross);
-                    (leftValue, rightValue) = (rightValue, leftValue);
-                }
-
-                var kValue = (rightValue - leftValue) / (rightCross.X - leftCross.X);
-                var kPoint = (rightCross - leftCross) / (rightCross.X - leftCross.X);
-                var left = Math.Max(0, (int)Math.Ceiling(leftCross.X));
-                var right = Math.Min(_width, (int)Math.Ceiling(rightCross.X));
-                for (var x = left; x < right; x++)
-                {
-                    Vector3 color;
-                    var interpolatedValue = leftValue + (x - leftCross.X) * kValue;
-                    switch (DrawMode)
-                    {
-                        case DrawMode.PhongLighting:
-                            color = GetPhongColor(interpolatedValue, lightPosition, -lightPosition);
-                            break;
-                        case DrawMode.Texture:
-                            color = GetTextureColor(interpolatedValue, material, lightPosition,
-                                -lightPosition);
-                            break;
-                        case DrawMode.Custom:
-                            color = GetCustomTextureColor(interpolatedValue, lightPosition, -lightPosition);
-                            break;
-                        default:
-                            color = interpolatedValue;
-                            break;
-                    }
-
-                    var zDepth = point0.Z + (x - leftCross.X) * kPoint.Z;
-                    if (zDepth < _zBuffer[x, y])
-                    {
-                        _zBuffer[x, y] = zDepth;
-                        SetPixelData(x, y, GetColorData(color));
-                    }
-                }
-            }
-        }
-        finally
-        {
-            // Release the back buffer and make it available for display
-            RenderBuffer.Unlock();
-        }
-    }
-
-    private Vector3 GetPhongColor(Vector3 normal, Vector3 light, Vector3 view)
-    {
-        var ambient = KAmbient * Ambient.Normalized;
-        ambient = Vector3.Clamp(ambient, Vector3.Zero, Vector3.One);
-        var diffuse = KDiffuse * MathF.Max(Vector3.Dot(normal, light), 0) * Diffuse.Normalized;
-        diffuse = Vector3.Clamp(diffuse, Vector3.Zero, Vector3.One);
-        var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
-        var specular = KSpecular * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), KShininess) * Specular.Normalized;
-        specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
-        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
-    }
-
-    private Vector3 GetTextureColor(Vector3 texture, Material? material, Vector3 light, Vector3 view)
-    {
-        var u = texture.X;
-        var v = texture.Y;
-        Vector3 ambient = Vector3.Zero, diffuse = Vector3.Zero, specular = Vector3.Zero;
-        var normal = material.GetNormalValue(u, v);
-        if (material is { Diffuse: not null })
-            ambient = diffuse = material.GetDiffuseValue(u, v);
-        ambient *= KAmbient;
-        diffuse *= KDiffuse * MathF.Max(Vector3.Dot(normal, light), 0);
-        var r = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
-        var kS = material.GetMirrorValue(u, v);
-        specular = kS * MathF.Pow(MathF.Max(Vector3.Dot(r, view), 0), KShininess) * Specular.Normalized;
-        specular = Vector3.Clamp(specular, Vector3.Zero, Vector3.One);
-        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
-    }
-
-    private Vector3 GetCustomTextureColor(Vector3 texture, Vector3 light, Vector3 view)
-    {
-        var u = texture.X;
-        var v = texture.Y;
-        Vector3 ambient = Vector3.Zero, diffuse = Vector3.Zero, specular = Vector3.Zero;
-        ambient = diffuse = CustomTexture.GetValue(u, v);
-        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
-    }
-
     public void DrawModel(Model model, Camera camera)
     {
         // Fill background
         FillRenderBuffer(Background.Color);
         ResetZBuffer();
 
-        var surfaceColor = Ambient.Normalized;
         var edgeColor = Background.InvertNormalized;
-        var lightColor = Specular.Normalized;
-        var lightPosition = Vector3.Normalize(camera.Position);
 
         model.Update(camera);
 
         // Drawing of each visible object
         foreach (var polygon in model.Polygons)
         {
+            if (DrawMode > DrawMode.Wire && !IsPolygonVisible(polygon, camera.Position)) continue;
+
             var vertex0 = polygon.Vertices[0].Position;
             var vertex1 = polygon.Vertices[1].Position;
             var vertex2 = polygon.Vertices[2].Position;
@@ -358,12 +172,17 @@ public class RenderEngine
                     break;
 
                 // Draw only visible rasterizer polygons
-                case DrawMode.Rasterisation:
+                case DrawMode.Lambert:
+                default:
+                    DrawPolygonLambert(polygon, camera);
+                    break;
                 case DrawMode.PhongShading:
                 case DrawMode.PhongLighting:
+                    DrawPolygonPhong(polygon, camera);
+                    break;
                 case DrawMode.Texture:
-                default:
-                    DrawRasterisation(polygon, camera, lightColor, lightPosition, surfaceColor);
+                case DrawMode.Custom:
+                    DrawPolygonTexture(polygon, camera);
                     break;
             }
         }
@@ -392,14 +211,295 @@ public class RenderEngine
             DrawLine(v1, v2, color);
     }
 
-    private void DrawRasterisation(Polygon polygon, Camera camera, Vector3 lightColor, Vector3 lightPosition,
-        Vector3 surfaceColor)
+    private void DrawPolygonLambert(Polygon polygon, Camera camera)
     {
-        if (!IsPolygonVisible(polygon, camera.Position)) return;
-        if (IsVertexVisible(polygon.Vertices[0].Position.Perspective) &&
-            IsVertexVisible(polygon.Vertices[1].Position.Perspective) &&
-            IsVertexVisible(polygon.Vertices[2].Position.Perspective))
-            DrawPolygon(polygon, lightColor, lightPosition, surfaceColor);
+        var point0 = polygon.Vertices[0].GetViewPort();
+        var point1 = polygon.Vertices[1].GetViewPort();
+        var point2 = polygon.Vertices[2].GetViewPort();
+
+        // Vertex sort
+        if (point0.Y > point2.Y) (point0, point2) = (point2, point0);
+        if (point0.Y > point1.Y) (point0, point1) = (point1, point0);
+        if (point1.Y > point2.Y) (point1, point2) = (point2, point1);
+
+        var k02 = (point2 - point0) / (point2.Y - point0.Y);
+        var k01 = (point1 - point0) / (point1.Y - point0.Y);
+        var k12 = (point2 - point1) / (point2.Y - point1.Y);
+
+        var colorData = GetColorData(
+            GetLambertColor(polygon.Normal, Vector3.Normalize(camera.Position))
+        );
+
+        var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
+        var bottom = Math.Min(_height - 1, (int)Math.Ceiling(point2.Y));
+
+        try
+        {
+            // Reserve the back buffer for updates
+            RenderBuffer.Lock();
+
+            for (var y = top; y < bottom; y++)
+            {
+                var leftPoint = point0 + (y - point0.Y) * k02;
+                var rightPoint = y < point1.Y ? point0 + (y - point0.Y) * k01 : point1 + (y - point1.Y) * k12;
+                if (leftPoint.X > rightPoint.X) (leftPoint, rightPoint) = (rightPoint, leftPoint);
+
+                var kLine = (rightPoint.Z - leftPoint.Z) / (rightPoint.X - leftPoint.X);
+
+                var left = Math.Max(0, (int)Math.Ceiling(leftPoint.X));
+                var right = Math.Min(_width - 1, (int)Math.Ceiling(rightPoint.X));
+                for (var x = left; x < right; x++)
+                {
+                    var zDepth = leftPoint.Z + (x - leftPoint.X) * kLine;
+                    if (zDepth < _zBuffer[x, y])
+                    {
+                        _zBuffer[x, y] = zDepth;
+                        SetPixelData(x, y, colorData);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            // Release the back buffer and make it available for display
+            RenderBuffer.Unlock();
+        }
+    }
+
+    private void DrawPolygonPhong(Polygon polygon, Camera camera)
+    {
+        var vertex0 = polygon.Vertices[0];
+        var vertex1 = polygon.Vertices[1];
+        var vertex2 = polygon.Vertices[2];
+
+        // Vertex sort
+        if (vertex0.Position.ViewPort.Y > vertex2.Position.ViewPort.Y) (vertex0, vertex2) = (vertex2, vertex0);
+        if (vertex0.Position.ViewPort.Y > vertex1.Position.ViewPort.Y) (vertex0, vertex1) = (vertex1, vertex0);
+        if (vertex1.Position.ViewPort.Y > vertex2.Position.ViewPort.Y) (vertex1, vertex2) = (vertex2, vertex1);
+
+        var point0 = vertex0.GetViewPort();
+        var point1 = vertex1.GetViewPort();
+        var point2 = vertex2.GetViewPort();
+
+        var normal0 = vertex0.GetNormal();
+        var normal1 = vertex1.GetNormal();
+        var normal2 = vertex2.GetNormal();
+
+        var world0 = vertex0.Position.Transform;
+        var world1 = vertex1.Position.Transform;
+        var world2 = vertex2.Position.Transform;
+
+        var kPoint02 = (point2 - point0) / (point2.Y - point0.Y);
+        var kPoint01 = (point1 - point0) / (point1.Y - point0.Y);
+        var kPoint12 = (point2 - point1) / (point2.Y - point1.Y);
+
+        var kNormal02 = (normal2 - normal0) / (point2.Y - point0.Y);
+        var kNormal01 = (normal1 - normal0) / (point1.Y - point0.Y);
+        var kNormal12 = (normal2 - normal1) / (point2.Y - point1.Y);
+
+        var kWorld02 = (world2 - world0) / (point2.Y - point0.Y);
+        var kWorld01 = (world1 - world0) / (point1.Y - point0.Y);
+        var kWorld12 = (world2 - world1) / (point2.Y - point1.Y);
+
+        var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
+        var bottom = Math.Min(_height - 1, (int)Math.Ceiling(point2.Y));
+
+        try
+        {
+            // Reserve the back buffer for updates
+            RenderBuffer.Lock();
+
+            for (var y = top; y < bottom; y++)
+            {
+                var leftPoint = point0 + (y - point0.Y) * kPoint02;
+                var rightPoint = y < point1.Y ? point0 + (y - point0.Y) * kPoint01 : point1 + (y - point1.Y) * kPoint12;
+
+                var leftNormal = normal0 + (y - point0.Y) * kNormal02;
+                var rightNormal = y < point1.Y
+                    ? normal0 + (y - point0.Y) * kNormal01
+                    : normal1 + (y - point1.Y) * kNormal12;
+
+                var leftWorld = world0 + (y - point0.Y) * kWorld02;
+                var rightWorld = y < point1.Y
+                    ? world0 + (y - point0.Y) * kWorld01
+                    : world1 + (y - point1.Y) * kWorld12;
+
+                if (leftPoint.X > rightPoint.X)
+                {
+                    (leftPoint, rightPoint) = (rightPoint, leftPoint);
+                    (leftNormal, rightNormal) = (rightNormal, leftNormal);
+                    (leftWorld, rightWorld) = (rightWorld, leftWorld);
+                }
+
+                var kLine = (rightPoint.Z - leftPoint.Z) / (rightPoint.X - leftPoint.X);
+                var kNormal = (rightNormal - leftNormal) / (rightPoint.X - leftPoint.X);
+                var kWorld = (rightWorld - leftWorld) / (rightPoint.X - leftPoint.X);
+
+                var left = Math.Max(0, (int)Math.Ceiling(leftPoint.X));
+                var right = Math.Min(_width - 1, (int)Math.Ceiling(rightPoint.X));
+                for (var x = left; x < right; x++)
+                {
+                    var zDepth = leftPoint.Z + (x - leftPoint.X) * kLine;
+                    if (zDepth < _zBuffer[x, y])
+                    {
+                        _zBuffer[x, y] = zDepth;
+                        var normal = leftNormal + (x - leftPoint.X) * kNormal;
+                        var world = leftWorld + (x - leftPoint.X) * kWorld;
+
+                        var light = camera.Position;
+                        light -= new Vector3(world.X, world.Y, world.Z);
+                        light = Vector3.Normalize(light);
+
+                        var color = DrawMode == DrawMode.PhongShading
+                            ? GetLambertColor(normal, light)
+                            : GetPhongColor(normal, light, Vector3.Normalize(-camera.Position));
+                        SetPixelData(x, y, GetColorData(color));
+                    }
+                }
+            }
+        }
+        finally
+        {
+            // Release the back buffer and make it available for display
+            RenderBuffer.Unlock();
+        }
+    }
+
+    private void DrawPolygonTexture(Polygon polygon, Camera camera)
+    {
+        var vertex0 = polygon.Vertices[0];
+        var vertex1 = polygon.Vertices[1];
+        var vertex2 = polygon.Vertices[2];
+
+        var material = polygon.Material ?? new Material("custom");
+        if (DrawMode == DrawMode.Custom) material.Diffuse = CustomTexture;
+
+        // Vertex sort
+        if (vertex0.Position.ViewPort.Y > vertex2.Position.ViewPort.Y) (vertex0, vertex2) = (vertex2, vertex0);
+        if (vertex0.Position.ViewPort.Y > vertex1.Position.ViewPort.Y) (vertex0, vertex1) = (vertex1, vertex0);
+        if (vertex1.Position.ViewPort.Y > vertex2.Position.ViewPort.Y) (vertex1, vertex2) = (vertex2, vertex1);
+
+        var point0 = vertex0.GetViewPort();
+        var point1 = vertex1.GetViewPort();
+        var point2 = vertex2.GetViewPort();
+
+        var depth0 = vertex0.Position.W;
+        var depth1 = vertex1.Position.W;
+        var depth2 = vertex2.Position.W;
+
+        var normal0 = vertex0.GetNormal() * depth0;
+        var normal1 = vertex1.GetNormal() * depth1;
+        var normal2 = vertex2.GetNormal() * depth2;
+
+        var world0 = vertex0.Position.Transform * depth0;
+        var world1 = vertex1.Position.Transform * depth1;
+        var world2 = vertex2.Position.Transform * depth2;
+
+        var texture0 = vertex0.Texture * depth0;
+        var texture1 = vertex1.Texture * depth1;
+        var texture2 = vertex2.Texture * depth2;
+
+        var kPoint02 = (point2 - point0) / (point2.Y - point0.Y);
+        var kPoint01 = (point1 - point0) / (point1.Y - point0.Y);
+        var kPoint12 = (point2 - point1) / (point2.Y - point1.Y);
+
+        var kNormal02 = (normal2 - normal0) / (point2.Y - point0.Y);
+        var kNormal01 = (normal1 - normal0) / (point1.Y - point0.Y);
+        var kNormal12 = (normal2 - normal1) / (point2.Y - point1.Y);
+
+        var kWorld02 = (world2 - world0) / (point2.Y - point0.Y);
+        var kWorld01 = (world1 - world0) / (point1.Y - point0.Y);
+        var kWorld12 = (world2 - world1) / (point2.Y - point1.Y);
+
+        var kTexture02 = (texture2 - texture0) / (point2.Y - point0.Y);
+        var kTexture01 = (texture1 - texture0) / (point1.Y - point0.Y);
+        var kTexture12 = (texture2 - texture1) / (point2.Y - point1.Y);
+
+        var kDepth02 = (depth2 - depth0) / (point2.Y - point0.Y);
+        var kDepth01 = (depth1 - depth0) / (point1.Y - point0.Y);
+        var kDepth12 = (depth2 - depth1) / (point2.Y - point1.Y);
+
+        var top = Math.Max(0, (int)Math.Ceiling(point0.Y));
+        var bottom = Math.Min(_height - 1, (int)Math.Ceiling(point2.Y));
+
+        try
+        {
+            // Reserve the back buffer for updates
+            RenderBuffer.Lock();
+
+            for (var y = top; y < bottom; y++)
+            {
+                var leftPoint = point0 + (y - point0.Y) * kPoint02;
+                var rightPoint = y < point1.Y ? point0 + (y - point0.Y) * kPoint01 : point1 + (y - point1.Y) * kPoint12;
+
+                var leftNormal = normal0 + (y - point0.Y) * kNormal02;
+                var rightNormal = y < point1.Y
+                    ? normal0 + (y - point0.Y) * kNormal01
+                    : normal1 + (y - point1.Y) * kNormal12;
+
+                var leftWorld = world0 + (y - point0.Y) * kWorld02;
+                var rightWorld = y < point1.Y
+                    ? world0 + (y - point0.Y) * kWorld01
+                    : world1 + (y - point1.Y) * kWorld12;
+
+                var leftDepth = depth0 + (y - point0.Y) * kDepth02;
+                var rightDepth = y < point1.Y
+                    ? depth0 + (y - point0.Y) * kDepth01
+                    : depth1 + (y - point1.Y) * kDepth12;
+
+                var leftTexture = texture0 + (y - point0.Y) * kTexture02;
+                var rightTexture = y < point1.Y
+                    ? texture0 + (y - point0.Y) * kTexture01
+                    : texture1 + (y - point1.Y) * kTexture12;
+
+                if (leftPoint.X > rightPoint.X)
+                {
+                    (leftPoint, rightPoint) = (rightPoint, leftPoint);
+                    (leftNormal, rightNormal) = (rightNormal, leftNormal);
+                    (leftWorld, rightWorld) = (rightWorld, leftWorld);
+                    (leftTexture, rightTexture) = (rightTexture, leftTexture);
+                    (leftDepth, rightDepth) = (rightDepth, leftDepth);
+                }
+
+                var kLine = (rightPoint.Z - leftPoint.Z) / (rightPoint.X - leftPoint.X);
+                var kNormal = (rightNormal - leftNormal) / (rightPoint.X - leftPoint.X);
+                var kWorld = (rightWorld - leftWorld) / (rightPoint.X - leftPoint.X);
+                var kTexture = (rightTexture - leftTexture) / (rightPoint.X - leftPoint.X);
+                var kDepth = (rightDepth - leftDepth) / (rightPoint.X - leftPoint.X);
+
+                var left = Math.Max(0, (int)Math.Ceiling(leftPoint.X));
+                var right = Math.Min(_width - 1, (int)Math.Ceiling(rightPoint.X));
+                for (var x = left; x < right; x++)
+                {
+                    var zDepth = leftPoint.Z + (x - leftPoint.X) * kLine;
+                    if (zDepth < _zBuffer[x, y])
+                    {
+                        _zBuffer[x, y] = zDepth;
+                        var normal = leftNormal + (x - leftPoint.X) * kNormal;
+                        var world = leftWorld + (x - leftPoint.X) * kWorld;
+                        var texture = leftTexture + (x - leftPoint.X) * kTexture;
+                        var depth = leftDepth + (x - leftPoint.X) * kDepth;
+                        normal /= depth;
+                        world /= depth;
+                        texture /= depth;
+
+                        var light = camera.Position;
+                        light -= new Vector3(world.X, world.Y, world.Z);
+                        light = Vector3.Normalize(light);
+
+                        var color = GetTextureColor(material, texture, normal, light,
+                            Vector3.Normalize(-camera.Position));
+
+                        SetPixelData(x, y, GetColorData(color));
+                    }
+                }
+            }
+        }
+        finally
+        {
+            // Release the back buffer and make it available for display
+            RenderBuffer.Unlock();
+        }
     }
 
     private static bool IsVertexVisible(Vector4 perspectiveVertex)
@@ -416,7 +516,10 @@ public class RenderEngine
             polygon.Vertices[0].Position.Transform.Y - cameraPosition.Y,
             polygon.Vertices[0].Position.Transform.Z - cameraPosition.Z
         ));
-        return Vector3.Dot(polygon.Normal, target) < 0;
+        return Vector3.Dot(polygon.Normal, target) < 0 &&
+               IsVertexVisible(polygon.Vertices[0].Position.Perspective) &&
+               IsVertexVisible(polygon.Vertices[1].Position.Perspective) &&
+               IsVertexVisible(polygon.Vertices[2].Position.Perspective);
     }
 
     private void ResetZBuffer()
@@ -435,5 +538,67 @@ public class RenderEngine
         }
 
         Rasterisation = RasterisationEnumerator.Current;
+    }
+
+
+    private static int GetColorData(Vector3 color)
+    {
+        var colorData = (int)(255 * color.X) << 16;
+        colorData |= (int)(255 * color.Y) << 8;
+        colorData |= (int)(255 * color.Z);
+        return colorData;
+    }
+
+    private Vector3 GetLambertColor(Vector3 normal, Vector3 light)
+    {
+        var lightColor = Specular.Normalized;
+        var surfaceColor = Diffuse.Normalized;
+        var intensity = Math.Max(Vector3.Dot(light, normal), 0);
+        return new Vector3(
+            intensity * lightColor.X * surfaceColor.X,
+            intensity * lightColor.Y * surfaceColor.Y,
+            intensity * lightColor.Z * surfaceColor.Z
+        );
+    }
+
+    private Vector3 GetPhongColor(Vector3 normal, Vector3 light, Vector3 view)
+    {
+        var ambient = KAmbient * Ambient.Normalized;
+        var diffuse = KDiffuse * Diffuse.Normalized * MathF.Max(Vector3.Dot(normal, light), 0);
+        var reflected = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
+        var specular = KSpecular * Specular.Normalized *
+                       MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess);
+        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
+    }
+
+    private Vector3 GetTextureColor(Material? material, Vector3 texture, Vector3 normal, Vector3 light, Vector3 view)
+    {
+        var u = texture.X;
+        var v = texture.Y;
+        Vector3 ambient, diffuse, specular;
+        if (material is { Diffuse: not null })
+        {
+            ambient = diffuse = material.GetDiffuseValue(u, v);
+        }
+        else
+        {
+            ambient = new Vector3(KAmbient);
+            diffuse = new Vector3(KDiffuse);
+        }
+
+        if (material is { Normal: not null })
+            normal = material.GetNormalValue(u, v);
+
+        ambient *= Ambient.Normalized;
+        diffuse *= Diffuse.Normalized * MathF.Max(Vector3.Dot(normal, light), 0);
+
+        var reflected = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
+
+        specular = material is { Mirror: not null }
+            ? new Vector3(material.GetMirrorValue(u, v))
+            : new Vector3(KSpecular);
+
+        specular *= MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess) * Specular.Normalized;
+        return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
 }

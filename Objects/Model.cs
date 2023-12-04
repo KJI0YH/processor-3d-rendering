@@ -201,6 +201,7 @@ public class Model
             vertex.Projected = Vector4.Transform(vertex.CameraView, camera.Projection);
             vertex.Perspective = vertex.Projected / vertex.Projected.W;
             vertex.ViewPort = Vector4.Transform(vertex.Perspective, camera.ViewPort);
+            vertex.W = 1 / vertex.Projected.W;
         }
 
         // Transform each vertex normal of the model

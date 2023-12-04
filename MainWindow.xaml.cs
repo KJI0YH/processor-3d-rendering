@@ -129,7 +129,7 @@ public partial class MainWindow : Window
                 _renderEngine.DrawMode = DrawMode.Wire;
                 break;
             case ActionList.RASTERISATION_DRAW_MODE_KEY:
-                _renderEngine.DrawMode = DrawMode.Rasterisation;
+                _renderEngine.DrawMode = DrawMode.Lambert;
                 break;
             case ActionList.PHONG_SHADING_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.PhongShading;

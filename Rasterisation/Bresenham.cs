@@ -37,6 +37,7 @@ public class Bresenham : IRasterisation
         var error = 0;
         var dError = 2 * int.Min(width, height);
 
+
         for (var x = 0; x <= stepCount; x++)
         {
             var xPixel = x1 + m11 * x + m12 * y;

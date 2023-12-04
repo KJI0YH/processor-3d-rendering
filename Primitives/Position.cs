@@ -10,6 +10,7 @@ public class Position
     public Vector4 Projected;
     public Vector4 Perspective;
     public Vector4 ViewPort;
+    public float W;
 
     public Position(Vector4 original)
     {
