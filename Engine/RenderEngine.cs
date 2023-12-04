@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Runtime.InteropServices.JavaScript;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.VisualBasic.FileIO;
 using Rendering.Information;
 using Rendering.Objects;
 using Rendering.Primitives;
@@ -35,7 +33,7 @@ public class RenderEngine
     public IRasterisation Rasterisation { get; private set; }
 
 
-    public DrawMode DrawMode = DrawMode.Lambert;
+    public DrawMode DrawMode = DrawMode.Texture;
 
     public readonly ColorComponent Ambient = new(0.5f, 0.5f, 0.5f);
     public readonly ColorComponent Diffuse = new(1f, 1f, 1f);
@@ -371,9 +369,6 @@ public class RenderEngine
         var vertex1 = polygon.Vertices[1];
         var vertex2 = polygon.Vertices[2];
 
-        var material = polygon.Material ?? new Material("custom");
-        if (DrawMode == DrawMode.Custom) material.Diffuse = CustomTexture;
-
         // Vertex sort
         if (vertex0.Position.ViewPort.Y > vertex2.Position.ViewPort.Y) (vertex0, vertex2) = (vertex2, vertex0);
         if (vertex0.Position.ViewPort.Y > vertex1.Position.ViewPort.Y) (vertex0, vertex1) = (vertex1, vertex0);
@@ -383,9 +378,9 @@ public class RenderEngine
         var point1 = vertex1.GetViewPort();
         var point2 = vertex2.GetViewPort();
 
-        var depth0 = vertex0.Position.W;
-        var depth1 = vertex1.Position.W;
-        var depth2 = vertex2.Position.W;
+        var depth0 = 1 / vertex0.Position.Projected.W;
+        var depth1 = 1 / vertex1.Position.Projected.W;
+        var depth2 = 1 / vertex2.Position.Projected.W;
 
         var normal0 = vertex0.GetNormal() * depth0;
         var normal1 = vertex1.GetNormal() * depth1;
@@ -487,7 +482,7 @@ public class RenderEngine
                         light -= new Vector3(world.X, world.Y, world.Z);
                         light = Vector3.Normalize(light);
 
-                        var color = GetTextureColor(material, texture, normal, light,
+                        var color = GetTextureColor(polygon.Material, texture, normal, light,
                             Vector3.Normalize(-camera.Position));
 
                         SetPixelData(x, y, GetColorData(color));
@@ -575,29 +570,19 @@ public class RenderEngine
     {
         var u = texture.X;
         var v = texture.Y;
-        Vector3 ambient, diffuse, specular;
-        if (material is { Diffuse: not null })
-        {
-            ambient = diffuse = material.GetDiffuseValue(u, v);
-        }
-        else
-        {
-            ambient = new Vector3(KAmbient);
-            diffuse = new Vector3(KDiffuse);
-        }
+        var ambient = new Vector3(KAmbient);
+        var diffuse = new Vector3(KDiffuse);
+        var specular = new Vector3(KSpecular);
+        var diffuseTexture = DrawMode == DrawMode.Custom ? CustomTexture : material?.Diffuse;
+        if (diffuseTexture != null) ambient = diffuse = diffuseTexture.GetValue(u, v);
 
         if (material is { Normal: not null })
             normal = material.GetNormalValue(u, v);
 
         ambient *= Ambient.Normalized;
         diffuse *= Diffuse.Normalized * MathF.Max(Vector3.Dot(normal, light), 0);
-
         var reflected = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
-
-        specular = material is { Mirror: not null }
-            ? new Vector3(material.GetMirrorValue(u, v))
-            : new Vector3(KSpecular);
-
+        if (material is { Mirror: not null }) specular = new Vector3(material.GetMirrorValue(u, v));
         specular *= MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess) * Specular.Normalized;
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
