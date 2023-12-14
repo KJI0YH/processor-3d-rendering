@@ -594,7 +594,7 @@ public class RenderEngine
 
         var mrao = material is { MRAO: not null }
             ? material.GetMRAOValue(uTexture, vTexture)
-            : Vector3.Zero;
+            : new Vector3(0, 0.2f, 0);
 
         var metallic = mrao.X;
         var roughness = mrao.Y;
