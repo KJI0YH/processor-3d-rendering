@@ -546,8 +546,8 @@ public class RenderEngine
 
     private Vector3 GetLambertColor(Vector3 normal, Vector3 light)
     {
-        var lightColor = Specular.Normalized;
-        var surfaceColor = Diffuse.Normalized;
+        var lightColor = Specular.Vector;
+        var surfaceColor = Diffuse.Vector;
         var intensity = Math.Max(Vector3.Dot(light, normal), 0);
         return new Vector3(
             intensity * lightColor.X * surfaceColor.X,
@@ -558,10 +558,10 @@ public class RenderEngine
 
     private Vector3 GetPhongColor(Vector3 normal, Vector3 light, Vector3 view)
     {
-        var ambient = KAmbient * Ambient.Normalized;
-        var diffuse = KDiffuse * Diffuse.Normalized * MathF.Max(Vector3.Dot(normal, light), 0);
+        var ambient = KAmbient * Ambient.Vector;
+        var diffuse = KDiffuse * Diffuse.Vector * MathF.Max(Vector3.Dot(normal, light), 0);
         var reflected = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
-        var specular = KSpecular * Specular.Normalized *
+        var specular = KSpecular * Specular.Vector *
                        MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess);
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
@@ -579,11 +579,11 @@ public class RenderEngine
         if (material is { Normal: not null })
             normal = material.GetNormalValue(u, v);
 
-        ambient *= Ambient.Normalized;
-        diffuse *= Diffuse.Normalized * MathF.Max(Vector3.Dot(normal, light), 0);
+        ambient *= Ambient.Vector;
+        diffuse *= Diffuse.Vector * MathF.Max(Vector3.Dot(normal, light), 0);
         var reflected = Vector3.Normalize(light - 2 * Vector3.Dot(light, normal) * normal);
         if (material is { Mirror: not null }) specular = new Vector3(material.GetMirrorValue(u, v));
-        specular *= MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess) * Specular.Normalized;
+        specular *= MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess) * Specular.Vector;
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
     }
 
@@ -601,19 +601,25 @@ public class RenderEngine
         var ao = mrao.Z;
         var albedo = material is { Diffuse: not null }
             ? material.GetDiffuseValue(uTexture, vTexture)
-            : Diffuse.Normalized;
+            : Diffuse.Vector;
+        albedo = new Vector3(
+            MathF.Pow(albedo.X, 2.2f),
+            MathF.Pow(albedo.Y, 2.2f),
+            MathF.Pow(albedo.Z, 2.2f)
+        );
 
         var n = Vector3.Normalize(material is { Normal: not null }
             ? material.GetNormalValue(uTexture, vTexture)
             : normal);
         var v = Vector3.Normalize(view);
 
-        var F0 = new Vector3(0.04f) * (1 - metallic) + albedo * metallic;
+        var F0 = new Vector3(0.04f);
+        F0 = Vector3.Lerp(F0, albedo, metallic);
 
         // Calculate per-light radiance
         var l = Vector3.Normalize(light);
         var h = Vector3.Normalize(v + l);
-        var radiance = Specular.Normalized * (1.0f / light.LengthSquared());
+        var radiance = Specular.Vector * (1.0f / light.LengthSquared());
 
         // Cook-Torrance BRDF
         var ndf = DistributionGGX(n, v, roughness);
@@ -629,7 +635,8 @@ public class RenderEngine
 
         var color = 0.03f * albedo * ao + (kD * albedo / MathF.PI + specular) * radiance * NdotL;
 
-        color /= color + Vector3.One;
+        // color /= color + Vector3.One;
+        color = ACESFitted(color);
         color = new Vector3(
             MathF.Pow(color.X, 1.0f / 2.2f),
             MathF.Pow(color.Y, 1.0f / 2.2f),
@@ -669,4 +676,42 @@ public class RenderEngine
     {
         return F0 + (Vector3.One - F0) * MathF.Pow(Math.Clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
     }
+
+    private Vector3 ACESFitted(Vector3 color)
+    {
+        color = new Vector3(
+            color.X * ACESInputMat[0, 0] + color.Y * ACESInputMat[0, 1] + color.Z * ACESInputMat[0, 2],
+            color.X * ACESInputMat[1, 0] + color.Y * ACESInputMat[1, 1] + color.Z * ACESInputMat[1, 2],
+            color.X * ACESInputMat[2, 0] + color.Y * ACESInputMat[2, 1] + color.Z * ACESInputMat[2, 2]
+        );
+        color = RRTAndODTFic(color);
+        color = new Vector3(
+            color.X * ACESOutputMat[0, 0] + color.Y * ACESOutputMat[0, 1] + color.Z * ACESOutputMat[0, 2],
+            color.X * ACESOutputMat[1, 0] + color.Y * ACESOutputMat[1, 1] + color.Z * ACESOutputMat[1, 2],
+            color.X * ACESOutputMat[2, 0] + color.Y * ACESOutputMat[2, 1] + color.Z * ACESOutputMat[2, 2]
+        );
+        color = Vector3.Clamp(color, Vector3.Zero, Vector3.One);
+        return color;
+    }
+
+    private Vector3 RRTAndODTFic(Vector3 v)
+    {
+        var a = v * (v + new Vector3(0.0245786f)) - new Vector3(0.000090537f);
+        var b = v * (0.983729f * v + new Vector3(0.4329510f)) + new Vector3(0.238081f);
+        return a / b;
+    }
+
+    private static float[,] ACESInputMat =
+    {
+        { 0.59719f, 0.35458f, 0.04823f },
+        { 0.076f, 0.90834f, 0.01566f },
+        { 0.02840f, 0.13383f, 0.83777f }
+    };
+
+    private static float[,] ACESOutputMat =
+    {
+        { 1.60475f, -0.53108f, -0.07367f },
+        { -0.10208f, 1.10813f, -0.00605f },
+        { -0.00327f, -0.07276f, 1.07602f }
+    };
 }
