@@ -98,7 +98,7 @@ public partial class MainWindow : Window
 
                     // Show error message
                     tbError.Visibility = Visibility.Visible;
-                    tbError.Text = _renderInfo.GetParseError(_modelParser.GetErrors());
+                    tbError.Text = RenderInfo.GetParseError(_modelParser.GetErrors());
                 }
 
                 _pressedKeys.Clear();
@@ -115,7 +115,7 @@ public partial class MainWindow : Window
                     catch (FileNotFoundException exception)
                     {
                         tbError.Visibility = Visibility.Visible;
-                        tbError.Text = _renderInfo.GetParseError(exception.Message);
+                        tbError.Text = RenderInfo.GetParseError(exception.Message);
                     }
                 }
 
@@ -142,6 +142,9 @@ public partial class MainWindow : Window
                 break;
             case ActionList.CUSTOM_TEXTURE_DRAW_MODE_KEY:
                 _renderEngine.DrawMode = DrawMode.Custom;
+                break;
+            case ActionList.PBR_DRAW_MODE_KEY:
+                _renderEngine.DrawMode = DrawMode.PBR;
                 break;
             case ActionList.INVERT_COLORS_KEY:
                 InvertColors();

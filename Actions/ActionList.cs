@@ -34,6 +34,7 @@ public class ActionList
     public const Key PHONG_LIGHTING_DRAW_MODE_KEY = Key.D4;
     public const Key TEXTURE_DRAW_MODE_KEY = Key.D5;
     public const Key CUSTOM_TEXTURE_DRAW_MODE_KEY = Key.D6;
+    public const Key PBR_DRAW_MODE_KEY = Key.D7;
     public const Key CAMERA_RESET_KEY = Key.Home;
     public const Key MOVE_UP_KEY = Key.Up;
     public const Key MOVE_RIGHT_KEY = Key.Right;

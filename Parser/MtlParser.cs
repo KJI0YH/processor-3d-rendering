@@ -63,6 +63,9 @@ public class MtlParser
                     case "norm":
                         _currentMaterial.Normal = ParseMaterialMap(tokens);
                         break;
+                    case "map_MRAO":
+                        _currentMaterial.MRAO = ParseMaterialMap(tokens);
+                        break;
                 }
             }
         }

@@ -180,6 +180,7 @@ public class RenderEngine
                     break;
                 case DrawMode.Texture:
                 case DrawMode.Custom:
+                case DrawMode.PBR:
                     DrawPolygonTexture(polygon, camera);
                     break;
             }
@@ -482,9 +483,9 @@ public class RenderEngine
                         light -= new Vector3(world.X, world.Y, world.Z);
                         light = Vector3.Normalize(light);
 
-                        var color = GetTextureColor(polygon.Material, texture, normal, light,
-                            Vector3.Normalize(-camera.Position));
-
+                        var color = DrawMode == DrawMode.PBR
+                            ? GetPBRColor(polygon.Material, texture, normal, light, light)
+                            : GetTextureColor(polygon.Material, texture, normal, light, -light);
                         SetPixelData(x, y, GetColorData(color));
                     }
                 }
@@ -535,7 +536,6 @@ public class RenderEngine
         Rasterisation = RasterisationEnumerator.Current;
     }
 
-
     private static int GetColorData(Vector3 color)
     {
         var colorData = (int)(255 * color.X) << 16;
@@ -585,5 +585,88 @@ public class RenderEngine
         if (material is { Mirror: not null }) specular = new Vector3(material.GetMirrorValue(u, v));
         specular *= MathF.Pow(MathF.Max(Vector3.Dot(reflected, view), 0), KShininess) * Specular.Normalized;
         return Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, Vector3.One);
+    }
+
+    private Vector3 GetPBRColor(Material? material, Vector3 texture, Vector3 normal, Vector3 light, Vector3 view)
+    {
+        var uTexture = texture.X;
+        var vTexture = texture.Y;
+
+        var mrao = material is { MRAO: not null }
+            ? material.GetMRAOValue(uTexture, vTexture)
+            : Vector3.Zero;
+
+        var metallic = mrao.X;
+        var roughness = mrao.Y;
+        var ao = mrao.Z;
+        var albedo = material is { Diffuse: not null }
+            ? material.GetDiffuseValue(uTexture, vTexture)
+            : Diffuse.Normalized;
+
+        var n = Vector3.Normalize(material is { Normal: not null }
+            ? material.GetNormalValue(uTexture, vTexture)
+            : normal);
+        var v = Vector3.Normalize(view);
+
+        var F0 = new Vector3(0.04f) * (1 - metallic) + albedo * metallic;
+
+        // Calculate per-light radiance
+        var l = Vector3.Normalize(light);
+        var h = Vector3.Normalize(v + l);
+        var radiance = Specular.Normalized * (1.0f / light.LengthSquared());
+
+        // Cook-Torrance BRDF
+        var ndf = DistributionGGX(n, v, roughness);
+        var g = GeometrySmith(n, v, l, roughness);
+        var f = FresnelSchlick(MathF.Max(Vector3.Dot(h, v), 0.0f), F0);
+
+        var kD = Vector3.One - f;
+        kD *= 1.0f - metallic;
+        var NdotL = MathF.Max(Vector3.Dot(n, l), 0.0f);
+        var NdotV = MathF.Max(Vector3.Dot(n, v), 0.0f);
+
+        var specular = ndf * g * f / (4.0f * NdotV * NdotL + 0.0001f);
+
+        var color = 0.03f * albedo * ao + (kD * albedo / MathF.PI + specular) * radiance * NdotL;
+
+        color /= color + Vector3.One;
+        color = new Vector3(
+            MathF.Pow(color.X, 1.0f / 2.2f),
+            MathF.Pow(color.Y, 1.0f / 2.2f),
+            MathF.Pow(color.Z, 1.0f / 2.2f)
+        );
+        return color;
+    }
+
+    private float DistributionGGX(Vector3 N, Vector3 H, float roughness)
+    {
+        var a = roughness * roughness;
+        var a2 = a * a;
+        var NdotH = MathF.Max(Vector3.Dot(N, H), 0.0f);
+        var NdotH2 = NdotH * NdotH;
+        var denominator = NdotH2 * (a2 - 1.0f) + 1.0f;
+        denominator *= MathF.PI * denominator;
+        return a2 / denominator;
+    }
+
+    private float GeometrySchlickGGX(float NdotV, float roughness)
+    {
+        var r = roughness + 1.0f;
+        var k = r * r / 8.0f;
+        return NdotV / (NdotV * (1.0f - k) + k);
+    }
+
+    private float GeometrySmith(Vector3 N, Vector3 V, Vector3 L, float roughness)
+    {
+        var NdotV = MathF.Max(Vector3.Dot(N, V), 0.0f);
+        var NdotL = MathF.Max(Vector3.Dot(N, L), 0.0f);
+        var ggx2 = GeometrySchlickGGX(NdotV, roughness);
+        var ggx1 = GeometrySchlickGGX(NdotL, roughness);
+        return ggx1 * ggx2;
+    }
+
+    private Vector3 FresnelSchlick(float cosTheta, Vector3 F0)
+    {
+        return F0 + (Vector3.One - F0) * MathF.Pow(Math.Clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
     }
 }

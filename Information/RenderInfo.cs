@@ -13,26 +13,21 @@ namespace Rendering.Information;
 public class RenderInfo
 {
     public int RenderTime = 0;
-    public readonly string HelpInfo;
-
-    public RenderInfo()
-    {
-        HelpInfo = GetHelp();
-    }
+    public readonly string HelpInfo = GetHelp();
 
     public string GetInformation(RenderEngine renderEngine, Model? model, Camera? camera)
     {
-        var cameraPosition = camera.SphericalPosition.ToCartesian();
+        var cameraPosition = camera?.SphericalPosition.ToCartesian() ?? Vector3.Zero;
         StringBuilder builder = new();
         builder
             .AppendLine($"Render time: {RenderTime} ms")
             .AppendLine($"Vertex count: {model?.Positions.Count ?? 0}")
             .AppendLine($"Polygons count: {model?.Polygons.Count ?? 0}")
-            .AppendLine($"Camera radius: {camera.SphericalPosition.R:F2}")
-            .AppendLine($"Azimuth angle: {RadianToDegree(camera.SphericalPosition.AzimuthAngle):N0}°")
-            .AppendLine($"Elevation angle: {RadianToDegree(camera.SphericalPosition.ZenithAngle):N0}°")
+            .AppendLine($"Camera radius: {camera?.SphericalPosition.R:F2 ?? 0}")
+            .AppendLine($"Azimuth angle: {RadianToDegree(camera?.SphericalPosition.AzimuthAngle ?? 0):N0}°")
+            .AppendLine($"Elevation angle: {RadianToDegree(camera?.SphericalPosition.ZenithAngle ?? 0):N0}°")
             .AppendLine($"Camera position: ({cameraPosition.X:F2}, {cameraPosition.Y:F2}, {cameraPosition.Z:F2})")
-            .AppendLine($"Camera target: ({camera.Target.X}, {camera.Target.Y}, {camera.Target.Z})")
+            .AppendLine($"Camera target: ({camera?.Target.X:: 0}, {camera?.Target.Y ?? 0}, {camera?.Target.Z ?? 0})")
             .AppendLine($"Scale: {model?.Scale ?? 0:F5}")
             .AppendLine($"Scale step: {Model.ScaleStep:F5}")
             .AppendLine($"Rotate X: {RadianToDegree(model?.XAxisRotate ?? 0):N0}°")
@@ -40,10 +35,10 @@ public class RenderInfo
             .AppendLine($"Rotate Z: {RadianToDegree(model?.ZAxisRotate ?? 0):N0}°")
             .AppendLine($"Move: ({model?.XPosition ?? 0:F2}, {model?.YPosition ?? 0:F2}, {model?.ZPosition ?? 0:F2})")
             .AppendLine($"Move step: {Model.MoveStep:F2}")
-            .AppendLine($"Zoom step: {camera.ZoomStep:F2}")
-            .AppendLine($"FOV: {RadianToDegree(camera.FOV):N0}°")
-            .AppendLine($"Near plane distance: {camera.ZNear}")
-            .AppendLine($"Far plane distance: {camera.ZFar}")
+            .AppendLine($"Zoom step: {camera?.ZoomStep:F2 ?? 0}")
+            .AppendLine($"FOV: {RadianToDegree(camera?.FOV ?? 0):N0}°")
+            .AppendLine($"Near plane distance: {camera?.ZNear ?? 0}")
+            .AppendLine($"Far plane distance: {camera?.ZFar ?? 0}")
             .AppendLine($"Plane distance step: {Camera.PlaneDistanceStep}")
             .AppendLine($"Rasterisation: {renderEngine.Rasterisation}")
             .AppendLine($"Drawing mode: {GetDescription(renderEngine.DrawMode)}")
@@ -51,66 +46,71 @@ public class RenderInfo
             .AppendLine($"Diffuse:\t{renderEngine.KDiffuse:N1} | {GetColorValue(renderEngine.Diffuse)}")
             .AppendLine($"Specular:\t{renderEngine.KSpecular:N1} | {GetColorValue(renderEngine.Specular)}")
             .AppendLine($"Shininess:\t{renderEngine.KShininess:N1}")
-            .AppendLine($"Screen width: {camera.ScreenWidth}")
-            .AppendLine($"Screen height: {camera.ScreenHeight}")
-            .AppendLine($"Screen aspect: {camera.ScreenWidth / camera.ScreenHeight:F5}");
+            .AppendLine($"Screen width: {camera?.ScreenWidth ?? 0}")
+            .AppendLine($"Screen height: {camera?.ScreenHeight ?? 0}")
+            .AppendLine($"Screen aspect: {camera?.ScreenWidth / camera?.ScreenHeight ?? 0:F5}");
         return builder.ToString();
     }
 
-    public string GetHelp()
+    private static string GetHelp()
     {
         StringBuilder builder = new();
         builder
-            .AppendLine($"To close the application: {Actions.ActionList.CLOSE_APP_KEY}")
-            .AppendLine($"To open a file: {Actions.ActionList.OPEN_MODEL_KEY}")
+            .AppendLine($"To close the application: {ActionList.CLOSE_APP_KEY}")
+            .AppendLine($"To open a model file: {ActionList.OPEN_MODEL_KEY}")
+            .AppendLine($"To open a texture file: {ActionList.OPEN_TEXTURE_KEY}")
             .AppendLine($"For model rotation: Mouse Drag or Key Arrows")
             .AppendLine($"To zoom (in|out) of the camera: Mouse Wheel")
-            .AppendLine($"To change the zoom step of the camera: {Actions.ActionList.CONTROL_KEY} + MouseWheel")
-            .AppendLine($"For rotation around the X axis: {Actions.ActionList.X_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For rotation around the Y axis: {Actions.ActionList.Y_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For rotation around the Z axis: {Actions.ActionList.Z_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For X axis movement: {Actions.ActionList.MOVE_KEY} + {Actions.ActionList.X_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For Y axis movement: {Actions.ActionList.MOVE_KEY} + {Actions.ActionList.Y_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For Z axis movement: {Actions.ActionList.MOVE_KEY} + {Actions.ActionList.Z_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"For change move step of the model: {Actions.ActionList.MOVE_STEP_KEY} + Mouse Wheel")
-            .AppendLine($"For scaling model: {Actions.ActionList.SCALE_KEY} + Mouse Wheel")
-            .AppendLine($"For change scaling step of the model: {Actions.ActionList.CONTROL_KEY} + " +
-                        $"{Actions.ActionList.SCALE_KEY} + Mouse Wheel")
-            .AppendLine($"To change the FOV: {Actions.ActionList.FOV_CHANGE_KEY} + Mouse Wheel")
-            .AppendLine($"To change near plane distance: {Actions.ActionList.NEAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
-            .AppendLine($"To change far plane distance: {Actions.ActionList.FAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
-            .AppendLine($"To change plane distance step: {Actions.ActionList.PLANE_DISTANCE_STEP_KEY} + Mouse Wheel")
-            .AppendLine($"To change Ambient coefficient: {Actions.ActionList.CONTROL_KEY} + " +
-                        $"{Actions.ActionList.AMBIENT_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Diffuse coefficient: {Actions.ActionList.CONTROL_KEY} + " +
-                        $"{Actions.ActionList.DIFFUSE_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Specular coefficient: {Actions.ActionList.CONTROL_KEY} + " +
-                        $"{Actions.ActionList.SPECULAR_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Shininess coefficient: {Actions.ActionList.CONTROL_KEY} + " +
-                        $"{Actions.ActionList.SHININESS_CONTROL_KEY} + Mouse Wheel")
-            .AppendLine($"To change Ambient color components: {Actions.ActionList.AMBIENT_CONTROL_KEY} + " +
-                        $"({Actions.ActionList.RED_CONTROL_KEY} | {Actions.ActionList.GREEN_CONTROL_KEY} | {Actions.ActionList.BLUE_CONTROL_KEY})" +
+            .AppendLine($"To change the zoom step of the camera: {ActionList.CONTROL_KEY} + MouseWheel")
+            .AppendLine($"For rotation around the X axis: {ActionList.X_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For rotation around the Y axis: {ActionList.Y_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For rotation around the Z axis: {ActionList.Z_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For X axis movement: {ActionList.MOVE_KEY} + {ActionList.X_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For Y axis movement: {ActionList.MOVE_KEY} + {ActionList.Y_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For Z axis movement: {ActionList.MOVE_KEY} + {ActionList.Z_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"For change move step of the model: {ActionList.MOVE_STEP_KEY} + Mouse Wheel")
+            .AppendLine($"For scaling model: {ActionList.SCALE_KEY} + Mouse Wheel")
+            .AppendLine($"For change scaling step of the model: {ActionList.CONTROL_KEY} + " +
+                        $"{ActionList.SCALE_KEY} + Mouse Wheel")
+            .AppendLine($"To change the FOV: {ActionList.FOV_CHANGE_KEY} + Mouse Wheel")
+            .AppendLine($"To change near plane distance: {ActionList.NEAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
+            .AppendLine($"To change far plane distance: {ActionList.FAR_PLANE_DISTANCE_CHANGE_KEY} + Mouse Wheel")
+            .AppendLine($"To change plane distance step: {ActionList.PLANE_DISTANCE_STEP_KEY} + Mouse Wheel")
+            .AppendLine($"To change Ambient coefficient: {ActionList.CONTROL_KEY} + " +
+                        $"{ActionList.AMBIENT_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Diffuse coefficient: {ActionList.CONTROL_KEY} + " +
+                        $"{ActionList.DIFFUSE_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Specular coefficient: {ActionList.CONTROL_KEY} + " +
+                        $"{ActionList.SPECULAR_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Shininess coefficient: {ActionList.CONTROL_KEY} + " +
+                        $"{ActionList.SHININESS_CONTROL_KEY} + Mouse Wheel")
+            .AppendLine($"To change Ambient color components: {ActionList.AMBIENT_CONTROL_KEY} + " +
+                        $"({ActionList.RED_CONTROL_KEY} | {ActionList.GREEN_CONTROL_KEY} | {ActionList.BLUE_CONTROL_KEY})" +
                         $" + Mouse Wheel")
-            .AppendLine($"To change Diffuse color components: {Actions.ActionList.DIFFUSE_CONTROL_KEY} + " +
-                        $"({Actions.ActionList.RED_CONTROL_KEY} | {Actions.ActionList.GREEN_CONTROL_KEY} | {Actions.ActionList.BLUE_CONTROL_KEY})" +
+            .AppendLine($"To change Diffuse color components: {ActionList.DIFFUSE_CONTROL_KEY} + " +
+                        $"({ActionList.RED_CONTROL_KEY} | {ActionList.GREEN_CONTROL_KEY} | {ActionList.BLUE_CONTROL_KEY})" +
                         $" + Mouse Wheel")
-            .AppendLine($"To change Specular color components: {Actions.ActionList.SPECULAR_CONTROL_KEY} + " +
-                        $"({Actions.ActionList.RED_CONTROL_KEY} | {Actions.ActionList.GREEN_CONTROL_KEY} | {Actions.ActionList.BLUE_CONTROL_KEY})" +
+            .AppendLine($"To change Specular color components: {ActionList.SPECULAR_CONTROL_KEY} + " +
+                        $"({ActionList.RED_CONTROL_KEY} | {ActionList.GREEN_CONTROL_KEY} | {ActionList.BLUE_CONTROL_KEY})" +
                         $" + Mouse Wheel")
-            .AppendLine($"To invert colors: {Actions.ActionList.INVERT_COLORS_KEY}")
-            .AppendLine($"To set the camera to the initial position: {Actions.ActionList.CAMERA_RESET_KEY}")
-            .AppendLine($"To change the rasterisation algorithm: {Actions.ActionList.RASTERISATION_CHANGE_KEY}")
-            .AppendLine($"Vertex only drawing mode: {Actions.ActionList.VERTEX_ONLY_DRAW_MODE_KEY}")
-            .AppendLine($"Wire drawing mode: {Actions.ActionList.WIRE_DRAW_MODE_KEY}")
-            .AppendLine($"Rasterisation drawing mode: {Actions.ActionList.RASTERISATION_DRAW_MODE_KEY}")
-            .AppendLine($"Phong shading drawing mode: {Actions.ActionList.PHONG_SHADING_DRAW_MODE_KEY}")
-            .AppendLine($"Phong lighting drawing mode: {Actions.ActionList.PHONG_LIGHTING_DRAW_MODE_KEY}")
-            .AppendLine($"To toggle the render information: {Actions.ActionList.INFORMATION_TOGGLE_KEY}")
-            .AppendLine($"To toggle the help : {Actions.ActionList.HELP_TOGGLE_KEY}");
+            .AppendLine($"To invert colors: {ActionList.INVERT_COLORS_KEY}")
+            .AppendLine($"To set the camera to the initial position: {ActionList.CAMERA_RESET_KEY}")
+            .AppendLine($"To change the rasterisation algorithm: {ActionList.RASTERISATION_CHANGE_KEY}")
+            .AppendLine($"Vertex only drawing mode: {ActionList.VERTEX_ONLY_DRAW_MODE_KEY}")
+            .AppendLine($"Wire drawing mode: {ActionList.WIRE_DRAW_MODE_KEY}")
+            .AppendLine($"Rasterisation drawing mode: {ActionList.RASTERISATION_DRAW_MODE_KEY}")
+            .AppendLine($"Phong shading drawing mode: {ActionList.PHONG_SHADING_DRAW_MODE_KEY}")
+            .AppendLine($"Phong lighting drawing mode: {ActionList.PHONG_LIGHTING_DRAW_MODE_KEY}")
+            .AppendLine($"Texture drawing mode: {ActionList.TEXTURE_DRAW_MODE_KEY}")
+            .AppendLine($"Custom texture drawing mode: {ActionList.CUSTOM_TEXTURE_DRAW_MODE_KEY}")
+            .AppendLine($"PBR drawing mode: {ActionList.PBR_DRAW_MODE_KEY}")
+            .AppendLine($"To toggle the errors information: {ActionList.ERRORS_TOGGLE_KEY}")
+            .AppendLine($"To toggle the render information: {ActionList.INFORMATION_TOGGLE_KEY}")
+            .AppendLine($"To toggle the help : {ActionList.HELP_TOGGLE_KEY}");
         return builder.ToString();
     }
 
-    public string GetParseError(string message)
+    public static string GetParseError(string message)
     {
         StringBuilder builder = new();
         builder
@@ -118,7 +118,7 @@ public class RenderInfo
         return builder.ToString();
     }
 
-    private float RadianToDegree(float radian)
+    private static float RadianToDegree(float radian)
     {
         var degree = radian * 180 / MathF.PI % 360;
         if (degree < 0) degree += 360;

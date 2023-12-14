@@ -9,6 +9,7 @@ public class Material
     public MaterialMap? Diffuse;
     public MaterialMap? Normal;
     public MaterialMap? Mirror;
+    public MaterialMap? MRAO;
 
     public Material(string name)
     {
@@ -28,5 +29,10 @@ public class Material
     public float GetMirrorValue(float u, float v)
     {
         return Mirror?.GetValue(u, v).Z ?? 1f;
+    }
+
+    public Vector3 GetMRAOValue(float u, float v)
+    {
+        return MRAO?.GetValue(u, v) ?? Vector3.One;
     }
 }

@@ -10,5 +10,8 @@ public enum DrawMode
     [Description("Phong shading")] PhongShading,
     [Description("Phong lighting")] PhongLighting,
     [Description("Texture")] Texture,
-    [Description("Custom texture")] Custom
+    [Description("Custom texture")] Custom,
+
+    [Description("Physically based rendering")]
+    PBR
 }
